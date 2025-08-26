@@ -1,202 +1,81 @@
-<h1 align="center">📑 DocuCheck</h1>
-<p align="center">
-  <b>AI-Powered Fact-Checker for Research Papers, Policy Briefs & Reports</b>  
-  <br/>
-  Built with <code>Python</code> • <code>PyMuPDF</code> • <code>Gemini</code>
-</p>
+# Docucheck
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Python-3.9%2B-blue?logo=python" />
-  <img src="https://img.shields.io/badge/AI-Gemini-black" />
-  <img src="https://img.shields.io/badge/License-MIT-green" />
-  <img src="https://img.shields.io/badge/Status-Prototype-orange" />
-</p>
+## Overview
+Docucheck is a Python-based tool that extracts factual claims from PDF documents and performs automated fact-checking using a generative AI model (Gemini or compatible). It produces a human-readable HTML report (`report.html`) summarizing extracted claims, internal consistency checks, and external verification results.
 
----
+## Contents
+- `Docucheck.py` — Main script: extracts text from PDFs, extracts claims, queries an LLM for fact checks, and generates `report.html`.
+- `requirements.txt` — Python dependencies used by `Docucheck.py`.
+- `3d.html`, `Style.css`, `script.js` — Demo 3D website included in the repo (optional for this project).
+- `.env.example` — Example environment variables (no secrets).
+- `.gitignore` — Ignores `.env` and other sensitive files.
 
-## ✨ What is DocuCheck?
+## Quick start (backend)
 
-Not every research paper or policy document tells the full truth.  
-**DocuCheck** is a prototype that helps spot:
-- ❌ Outdated claims  
-- ⚖️ Internal mismatches (e.g., participant counts, conflicting years)  
-- 🌍 Misleading statistics  
+1. Create and activate a virtual environment (PowerShell):
 
-It reads a PDF, extracts factual claims, checks them for **consistency + accuracy**, and generates a **clean HTML dashboard report**.
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+```
 
-<p align="center">
-  <img src="./screenshots/report-summary.png" width="700"/>
-  <br/>
-  <i>Example report output (dashboard with claim validation)</i>
-</p>
+2. Install dependencies:
 
----
-
-## 🚀 Quickstart
-
-### 1️⃣ Clone the repo
-```bash
-git clone https://github.com/<your-username>/docucheck-ai.git
-cd docucheck-ai
-2️⃣ Create & activate a venv
-bash
-Copy
-Edit
-python -m venv venv
-# Windows
-venv\Scripts\activate
-# macOS/Linux
-source venv/bin/activate
-3️⃣ Install requirements
-bash
-Copy
-Edit
+```powershell
 pip install -r requirements.txt
-4️⃣ Configure API key
-bash
-Copy
-Edit
-cp .env.example .env
-Open .env and add:
+```
 
-ini
-Copy
-Edit
-GEMINI_API_KEY=your_api_key_here
-5️⃣ Run on a PDF
-bash
-Copy
-Edit
-python docucheck.py sample_docs/misleading_doc.pdf
-Output:
+3. Copy `.env.example` to `.env` and add your Gemini API key:
 
-✅ report.html → interactive dashboard
+```powershell
+copy .env.example .env
+# Edit .env and set GEMINI_API_KEY=your-key
+```
 
-📑 Terminal logs (claims extracted + checked)
+4. Place the PDF you want to analyze next to `Docucheck.py` or update the script's path, then run:
 
-📂 Project Structure
-bash
-Copy
-Edit
-docucheck-ai/
-├─ docucheck.py           # main script
-├─ requirements.txt
-├─ README.md
-├─ .env.example
-├─ .gitignore
-├─ LICENSE
-├─ sample_docs/
-│  ├─ misleading_doc.pdf   # fake paper with errors (demo)
-│  └─ climate_test.pdf     # real-world style doc
-├─ screenshots/
-│  ├─ report-summary.png
-│  └─ report-claims.png
-🧠 How it Works
-Extract text → parse PDF using PyMuPDF
+```powershell
+python Docucheck.py
+```
 
-Claim extraction → Gemini identifies claims in JSON
+5. `report.html` will be generated in the same folder with extracted claims and fact-check notes.
 
-Internal checks → mismatched numbers, years, participant counts
+## How it works (high level)
+- Extract text from the provided PDF using PyMuPDF (`fitz`).
+- Use a small prompt to a generative model to extract structured claims.
+- Perform internal consistency checks (e.g., conflicting numbers/dates) locally.
+- Ask the model to perform external checks and return evidence and a confidence summary.
+- Generate a readable HTML report with findings.
 
-External checks → Gemini validates claims against knowledge
+## Configuration
+- `GEMINI_API_KEY` must be set in `.env` for LLM calls. If you don't have an API key or prefer not to use one, the script will use heuristic fallbacks for claim extraction but external verification may be skipped.
 
-Report generator → HTML dashboard with ✅ Valid / ❌ Outdated
+## Security
+- Never commit a real `.env` file. Use `.env.example` in the repo and set secrets locally or via your CI provider's secret store.
+- If a key was accidentally committed, rotate it immediately and consider scrubbing history.
 
-<p align="center"> <img src="./screenshots/report-claims.png" width="700"/> <br/> <i>Extracted claims with status indicators</i> </p>
-🧪 Demo Docs
-sample_docs/misleading_doc.pdf → Fake “research paper” with intentional errors
+## Publishing to GitHub
+1. (If not already) initialize and commit the repo locally:
 
-sample_docs/climate_test.pdf → Climate summary with real + testable claims
+```powershell
+git init -b main
+git add .
+git commit -m "Initial commit: Docucheck"
+```
 
-You can drop any academic, policy, or geopolitical PDF into sample_docs/ and run DocuCheck on it.
+2. Create a GitHub repository, then add the remote and push:
 
-📦 Requirements
-shell
-Copy
-Edit
-python-dotenv>=1.0.1
-PyMuPDF>=1.24.9
-google-generativeai>=0.7.2
-🛣 Roadmap
- Handle complex PDFs (multi-column, tables, references)
+```powershell
+git remote add origin https://github.com/<your-username>/<repo-name>.git
+git push -u origin main
+```
 
- Add source-backed verification (links to real references)
+## Troubleshooting
+- If you see "No module named fitz": install PyMuPDF with `pip install PyMuPDF`.
+- If the model returns unparsable text, the script logs raw output and applies heuristics to extract claims.
 
- Build Streamlit UI (drag & drop PDFs → instant dashboard)
+## License
+Demo/hackathon code — free to adapt. Replace placeholder keys and models before production use.
 
- Export results to CSV/PDF
-
- Add confidence scoring
-
- Domain presets (medical, climate, geopolitics)
-
-⚠️ Known Limitations
-Most papers are correct → sometimes no issues will appear
-
-Some claims need deep domain context → AI may be uncertain
-
-Parsing complex PDFs (columns, figures) is tricky
-
-Verification is reasoning-based, not a “live source lookup”
-
-Ambiguous statements (“might”, “likely”) are hard to fact-check
-
-👉 This is v1. Not perfect — but catching even 10% of hidden errors can prevent misinformation from spreading.
-
-🤝 Contributing
-Contributions welcome!
-
-Keep PRs small + testable
-
-Add docstrings & screenshots if possible
-
-📜 License
-MIT License — see LICENSE
-
-🙋‍♂️ About
-👋 Built by <your name>
-
-🌐 LinkedIn: [your profile]
-
-💬 Always open to collabs in AI, NLP, and research integrity
-
-<p align="center"> <b>🚀 DocuCheck: Bringing trust & accountability back into research.</b> </p> ```
-📦 requirements.txt
-markdown
-Copy
-Edit
-python-dotenv>=1.0.1
-PyMuPDF>=1.24.9
-google-generativeai>=0.7.2
-🔐 .env.example
-markdown
-Copy
-Edit
-# Gemini API Key
-GEMINI_API_KEY=your_api_key_here
-🙈 .gitignore
-markdown
-Copy
-Edit
-# Python
-__pycache__/
-*.pyc
-.venv/
-venv/
-
-# Environment
-.env
-
-# Reports & cache
-report.html
-screenshots/*.psd
-
-# OS
-.DS_Store
-📜 LICENSE (MIT)
-markdown
-Copy
-Edit
-MIT License
-
-Copyright (c) 2025 <Your Name>
+## Contact
+Open an issue or contact the project owner for help or feature requests.
