@@ -1,81 +1,170 @@
-# Docucheck
+# DocuCheck
 
-## Overview
-Docucheck is a Python-based tool that extracts factual claims from PDF documents and performs automated fact-checking using a generative AI model (Gemini or compatible). It produces a human-readable HTML report (`report.html`) summarizing extracted claims, internal consistency checks, and external verification results.
+[![Project Status](https://img.shields.io/badge/status-active-brightgreen)](https://github.com/aryash45/docucheck)  [![Python Version](https://img.shields.io/badge/python-3.9+-blue)](https://www.python.org/)[![License](https://img.shields.io/badge/license-MIT-green)](./LICENSE)
 
-## Contents
-- `Docucheck.py` — Main script: extracts text from PDFs, extracts claims, queries an LLM for fact checks, and generates `report.html`.
-- `requirements.txt` — Python dependencies used by `Docucheck.py`.
-- `3d.html`, `Style.css`, `script.js` — Demo 3D website included in the repo (optional for this project).
-- `.env.example` — Example environment variables (no secrets).
-- `.gitignore` — Ignores `.env` and other sensitive files.
+---
 
-## Quick start (backend)
+## 🧠 Overview
 
-1. Create and activate a virtual environment (PowerShell):
+**DocuCheck** is a Python-based tool that extracts factual claims from documents (like PDFs) and performs **automated fact-checking** using a generative AI model (Google’s Gemini).  
+It produces a **human-readable HTML report** (`report.html`) summarizing extracted claims, internal consistency checks, and external verification results.
+
+---
+
+## ⚙️ Features
+
+- **Structural Text Extraction:** Parses PDFs to understand document structure (headings vs. paragraphs) for better context.  
+- **AI-Powered Claim Extraction:** Uses a generative model to identify and extract factual claims from text.  
+- **Internal Consistency Analysis:** Detects contradictions *within* the document’s own claims.  
+- **External Fact-Checking:** Verifies claims against the model’s external knowledge to identify outdated or invalid information.  
+- **Modern HTML Reporting:** Generates a clean, single-page HTML report with a visual summary dashboard.  
+- **Result Caching:** Caches analysis results to avoid re-processing and repeated API calls.
+
+---
+
+## 🗂️ Project Structure
+
+```
+Docucheck/
+├── main.py           # Main CLI entry point with argument parsing
+├── extractor.py      # Handles PDF parsing and claim extraction
+├── verifier.py       # Handles internal/external fact-checking
+├── reporter.py       # Generates the final HTML report
+├── caching.py        # Manages file hashing and result caching
+└── utils.py          # Shared utilities (e.g., JSON parsing)
+
+run.py                # The main script to execute the package
+requirements.txt      # Python dependencies
+.env.example          # Example environment variables
+.gitignore            # Ignores .env, .venv, pycache, etc.
+LICENSE               # MIT License
+README.md             # This file
+```
+
+---
+
+## 🚀 Quick Start
+
+### 1. Installation
+
+Clone the repository and navigate into the project directory:
+
+```bash
+git clone https://github.com/<your-username>/docucheck.git
+cd docucheck
+```
+
+---
+
+### 2. Set Up Virtual Environment
+
+**Windows (PowerShell):**
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
 
-2. Install dependencies:
+**macOS/Linux (bash):**
 
-```powershell
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+---
+
+### 3. Install Dependencies
+
+```bash
 pip install -r requirements.txt
 ```
 
-3. Copy `.env.example` to `.env` and add your Gemini API key:
+---
+
+### 4. Set Up Environment
+
+Copy the example `.env` file and add your **Gemini API key**.
+
+**Windows (PowerShell):**
 
 ```powershell
 copy .env.example .env
-# Edit .env and set GEMINI_API_KEY=your-key
+# Now edit the .env file with Notepad or VS Code
 ```
 
-4. Place the PDF you want to analyze next to `Docucheck.py` or update the script's path, then run:
+**macOS/Linux (bash):**
 
-```powershell
-python Docucheck.py
+```bash
+cp .env.example .env
+# Now edit the .env file with nano, vim, or VS Code
 ```
 
-5. `report.html` will be generated in the same folder with extracted claims and fact-check notes.
+Your `.env` file should look like this:
 
-## How it works (high level)
-- Extract text from the provided PDF using PyMuPDF (`fitz`).
-- Use a small prompt to a generative model to extract structured claims.
-- Perform internal consistency checks (e.g., conflicting numbers/dates) locally.
-- Ask the model to perform external checks and return evidence and a confidence summary.
-- Generate a readable HTML report with findings.
-
-## Configuration
-- `GEMINI_API_KEY` must be set in `.env` for LLM calls. If you don't have an API key or prefer not to use one, the script will use heuristic fallbacks for claim extraction but external verification may be skipped.
-
-## Security
-- Never commit a real `.env` file. Use `.env.example` in the repo and set secrets locally or via your CI provider's secret store.
-- If a key was accidentally committed, rotate it immediately and consider scrubbing history.
-
-## Publishing to GitHub
-1. (If not already) initialize and commit the repo locally:
-
-```powershell
-git init -b main
-git add .
-git commit -m "Initial commit: Docucheck"
+```ini
+GEMINI_API_KEY=your-api-key-goes-here
 ```
 
-2. Create a GitHub repository, then add the remote and push:
+---
 
-```powershell
-git remote add origin https://github.com/<your-username>/<repo-name>.git
-git push -u origin main
+## 🧩 Usage
+
+Run the application using `run.py`, passing the path to the document you want to analyze.
+
+### Basic Example
+
+```bash
+python run.py "path/to/your/document.pdf"
 ```
 
-## Troubleshooting
-- If you see "No module named fitz": install PyMuPDF with `pip install PyMuPDF`.
-- If the model returns unparsable text, the script logs raw output and applies heuristics to extract claims.
+This will analyze the PDF and save the report as `report.html` in the same directory.
 
-## License
-Demo/hackathon code — free to adapt. Replace placeholder keys and models before production use.
+---
 
-## Contact
-Open an issue or contact the project owner for help or feature requests.
+### Command-Line Arguments
+
+| Argument | Description | Required | Default |
+|-----------|--------------|-----------|----------|
+| `input_file` | Path to the input file (.pdf, .txt, etc.) | ✅ | — |
+| `-o`, `--output` | Path to save the output HTML report | ❌ | `report.html` |
+| `-l`, `--limit` | Limit the number of claims to externally fact-check (0 = all) | ❌ | `0` |
+| `--force` | Force re-analysis and bypass cached results | ❌ | `False` |
+
+---
+
+### Full Example
+
+```bash
+python run.py "my_research.pdf" -o "MyReport.html" -l 5 --force
+```
+
+This command:
+- Analyzes `my_research.pdf`
+- Saves the report as `MyReport.html`
+- Only fact-checks the first **5 claims**
+- **Bypasses** the cache
+
+---
+
+## 🧠 How It Works
+
+1. `run.py` executes the `main()` function in `Docucheck/__main__.py`.  
+2. The script parses command-line arguments.  
+3. `caching.py` generates a **SHA-256 hash** of the input file and checks for a cached result.  
+4. If cache exists (and `--force` not used), analysis is skipped and report generation begins.  
+5. If no cache:
+   - `extractor.py` uses **PyMuPDF** to extract structured text.
+   - Text is sent to **Gemini API** for claim extraction.
+6. `verifier.py`:
+   - Checks for **internal contradictions**.
+   - Performs **external fact-checking** using Gemini’s knowledge.
+7. `reporter.py` compiles all results into a single **HTML report**.
+8. `caching.py` saves all results (claims, contradictions, checks) to a `.Docucheck_Cache` JSON file.
+
+---
+
+## 📄 License
+
+Distributed under the **MIT License**.  
+See [LICENSE](./LICENSE) for more information.
