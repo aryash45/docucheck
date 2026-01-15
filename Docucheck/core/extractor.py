@@ -69,7 +69,7 @@ def extract_claims(structured_text):
     [H1]=Main Heading, [H2]=Sub-heading, [P]=Paragraph
     Return ONLY: [{{"claim": "...", "section": "..."}}]
     
-    {structured_text[:25000]}"""
+    {structured_text}"""
     
     try:
         resp = model.generate_content(prompt)
