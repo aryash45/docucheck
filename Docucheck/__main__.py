@@ -1,9 +1,64 @@
-"""Main CLI entry point for DocuCheck."""
-import argparse, sys, os
+"""Main CLI entry point for DocuCheck - Asynchronous Orchestrator."""
+import argparse
+import sys
+import os
+import asyncio
 from . import core, report
 
+
+from .models.schemas import Claim
+
+async def run_analysis_async(args):
+    """
+    Production-grade asynchronous analysis pipeline.
+    Orchestrates extraction and parallel verification tasks.
+    """
+    print(" 📖 Extracting text...")
+    try:
+        if args.input_file.lower().endswith(".pdf"):
+            text = core.extractor.extract_structured_text(args.input_file)
+        else:
+            with open(args.input_file, 'r', encoding='utf-8') as f:
+                text = f.read()
+    except Exception as e:
+        print(f"Error processing file: {e}", file=sys.stderr)
+        return None, None, None
+
+    print(" 🔎 Extracting claims...")
+    # Get raw claims and hydrate them into Pydantic objects
+    raw_claims = core.extractor.extract_claims(text)
+    if not raw_claims:
+        print("No claims extracted.")
+        return [], [], []
+    
+    claims = [Claim(**c) for c in raw_claims]
+    print(f"  -> Extracted {len(claims)} claims.")
+
+    # ---------------------------------------------------------
+    # PARALLEL EXECUTION BLOCK
+    # ---------------------------------------------------------
+    print(f" 🚀 Performing parallel verification on {len(claims)} claims...")
+    
+    # Define the limit for external checks
+    claims_to_check = claims if args.limit == 0 else claims[:args.limit]
+    
+    # Prepare all asynchronous tasks
+    consistency_task = core.verifier.check_consistency_async(claims)
+    fact_check_tasks = [
+        core.verifier.external_fact_check_async(c) for c in claims_to_check
+    ]
+    
+    # Execute everything concurrently using asyncio.gather
+    # results[0] will be the consistency issues, the rest are fact-checks
+    all_results = await asyncio.gather(consistency_task, *fact_check_tasks)
+    
+    issues = all_results[0]
+    external_checks = all_results[1:]
+        
+    return claims, issues, external_checks
+
 def main():
-    """Main CLI entry point."""
+    """Entry point that manages the event loop and report generation."""
     parser = argparse.ArgumentParser(
         description="DocuCheck: Extract and verify claims from documents."
     )
@@ -21,79 +76,48 @@ def main():
     input_filename = os.path.basename(args.input_file)
     print(f"Processing '{input_filename}'...")
 
-    # Check cache
+    # Check cache logic
     file_hash = core.caching.get_file_hash(args.input_file)
+    cached_data = None
     if not args.force and file_hash:
         cached_data = core.caching.get_cache(file_hash)
-        if cached_data:
-            print("Using cached results.")
-            claims = cached_data.get("claims", [])
-            issues = cached_data.get("issues", [])
-            external_checks = cached_data.get("external_checks", [])
-        else:
-            claims, issues, external_checks = run_analysis(args)
-            if file_hash:
-                core.caching.set_cache(file_hash, {
-                    "claims": claims, "issues": issues, "external_checks": external_checks
-                })
+
+    if cached_data:
+        print(" Using cached results.")
+        claims = [Claim(**c) for c in cached_data.get("claims", [])]
+        issues = cached_data.get("issues", [])
+        external_checks = cached_data.get("external_checks", [])
     else:
         if args.force:
-            print("Bypassing cache (--force set).")
-        claims, issues, external_checks = run_analysis(args)
+            print(" Bypassing cache (--force set).")
+        
+        # Run the asynchronous pipeline
+        claims, issues, external_checks = asyncio.run(run_analysis_async(args))
+        
+        if claims is None:
+            sys.exit(1)
+
         if file_hash and not args.force:
+            # Convert objects back to dicts for JSON caching
             core.caching.set_cache(file_hash, {
-                "claims": claims, "issues": issues, "external_checks": external_checks
+                "claims": [c.dict() for c in claims], 
+                "issues": [i.description for i in issues], 
+                "external_checks": [e.dict() for e in external_checks]
             })
 
     print(" Generating report...")
+    # Convert Pydantic models back to dicts for the legacy reporter
+    report_claims = [c.dict() for c in claims]
+    report_issues = [i.description if hasattr(i, 'description') else i for i in issues]
+    report_checks = [e.dict() for e in external_checks]
+
     html_report = report.reporter.generate_report(
-        claims, issues, external_checks, input_filename
+        report_claims, report_issues, report_checks, input_filename
     )
 
-    try:
-        with open(args.output, "w", encoding="utf-8") as f:
-            f.write(html_report)
-        print(f" Report saved to {args.output}")
-    except IOError as e:
-        print(f"Error writing report: {e}", file=sys.stderr)
-        sys.exit(1)
-
-def run_analysis(args):
-    """Run the full analysis pipeline."""
-    print(" Extracting text...")
-    try:
-        if args.input_file.lower().endswith(".pdf"):
-            text = core.extractor.extract_structured_text(args.input_file)
-        else:
-            with open(args.input_file, 'r', encoding='utf-8') as f:
-                text = f.read()
-    except Exception as e:
-        print(f"Error processing file: {e}", file=sys.stderr)
-        sys.exit(1)
-
-    print(" Extracting claims...")
-    claims = core.extractor.extract_claims(text)
-    if not claims:
-        print("No claims extracted.")
-        return [], [], []
-    print(f"  -> Extracted {len(claims)} claims.")
-
-    print(" Checking consistency...")
-    issues = core.verifier.check_consistency_with_llm(claims)
-    
-    print(" Performing fact-checks...")
-    claims_to_check = claims if args.limit == 0 else claims[:args.limit]
-    if args.limit > 0 and len(claims) > args.limit:
-        print(f"  -> Checking {args.limit}/{len(claims)} claims")
-    else:
-        print(f"  -> Checking all {len(claims_to_check)} claims")
-
-    external_checks = []
-    for i, c in enumerate(claims_to_check):
-        print(f"  -> Checking claim {i+1}/{len(claims_to_check)}...")
-        external_checks.append(core.verifier.external_fact_check(c["claim"]))
-        
-    return claims, issues, external_checks
+    with open(args.output, "w", encoding="utf-8") as f:
+        f.write(html_report)
+    print(f" ✨ Analysis complete. Report saved to {args.output}")
 
 if __name__ == "__main__":
     main()
