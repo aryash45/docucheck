@@ -1,0 +1,3 @@
+"""
+Autonomous Researcher main package.
+"""
