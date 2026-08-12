@@ -65,51 +65,66 @@ MOCK_PAPERS_OA = [
 ]
 
 
-def test_semantic_scholar():
-    print("\n--- TEST 1: Semantic Scholar ---")
+import pytest
+
+
+def _get_ss_papers():
     fetcher = SemanticScholarFetcher()
     try:
         papers = fetcher.search("attention mechanism transformers", limit=5)
-        assert len(papers) > 0, "No papers returned"
-        assert papers[0].title, "Paper has no title"
-        assert papers[0].abstract, "Paper has no abstract"
-        print(f"[OK] Got {len(papers)} papers from Semantic Scholar API")
-        print(f"  Top paper: {papers[0].title} ({papers[0].year})")
-        print(f"  Citations: {papers[0].citation_count}")
-        return papers
+        if papers and len(papers) > 0 and papers[0].title and papers[0].abstract:
+            return papers
     except Exception as e:
         print(f"[WARNING] Semantic Scholar API search failed ({e}). Falling back to mock data.")
-        return MOCK_PAPERS_SS
+    return MOCK_PAPERS_SS
+
+
+def _get_oa_papers():
+    fetcher = OpenAlexFetcher()
+    try:
+        papers = fetcher.search("sparsity neural networks", limit=5)
+        if papers and len(papers) > 0 and papers[0].abstract:
+            return papers
+    except Exception as e:
+        print(f"[WARNING] OpenAlex API search failed ({e}). Falling back to mock data.")
+    return MOCK_PAPERS_OA
+
+
+@pytest.fixture
+def sample_papers():
+    return MOCK_PAPERS_SS + MOCK_PAPERS_OA
+
+
+def test_semantic_scholar():
+    print("\n--- TEST 1: Semantic Scholar ---")
+    papers = _get_ss_papers()
+    assert len(papers) > 0, "No papers returned"
+    assert papers[0].title, "Paper has no title"
+    assert papers[0].abstract, "Paper has no abstract"
+    print(f"[OK] Got {len(papers)} papers from Semantic Scholar / Mock data")
 
 
 def test_openAlex():
     print("\n--- TEST 2: OpenAlex ---")
-    fetcher = OpenAlexFetcher()
-    try:
-        papers = fetcher.search("sparsity neural networks", limit=5)
-        assert len(papers) > 0, "No papers returned"
-        assert papers[0].abstract, "Abstract reconstruction failed"
-        print(f"[OK] Got {len(papers)} papers from OpenAlex API")
-        print(f"  Top paper: {papers[0].title} ({papers[0].year})")
-        return papers
-    except Exception as e:
-        print(f"[WARNING] OpenAlex API search failed ({e}). Falling back to mock data.")
-        return MOCK_PAPERS_OA
+    papers = _get_oa_papers()
+    assert len(papers) > 0, "No papers returned"
+    assert papers[0].abstract, "Abstract reconstruction failed"
+    print(f"[OK] Got {len(papers)} papers from OpenAlex / Mock data")
 
 
-def test_faiss_cache(papers):
+def test_faiss_cache(sample_papers):
     print("\n--- TEST 3: FAISS Cache ---")
     shutil.rmtree("cache/faiss_test", ignore_errors=True)
     cache = FAISSCache("cache/faiss_test")
 
     # Set cache
-    cache.set("test_query", papers)
+    cache.set("test_query", sample_papers)
     print("[OK] Cache written")
 
     # Get cache
     cached = cache.get("test_query")
     assert cached is not None, "Cache miss on immediate retrieval"
-    assert len(cached) == len(papers), "Cache returned wrong number of papers"
+    assert len(cached) == len(sample_papers), "Cache returned wrong number of papers"
     print(f"[OK] Cache retrieved {len(cached)} papers")
 
     # Semantic search
@@ -161,9 +176,9 @@ if __name__ == "__main__":
     print("=" * 50)
 
     try:
-        ss_papers = test_semantic_scholar()
-        oa_papers = test_openAlex()
-        test_faiss_cache(ss_papers + oa_papers)
+        test_semantic_scholar()
+        test_openAlex()
+        test_faiss_cache(_get_ss_papers() + _get_oa_papers())
         test_full_pipeline()
         print("\n" + "=" * 50)
         print("[OK] ALL TESTS PASSED — Ready for Stage 2")

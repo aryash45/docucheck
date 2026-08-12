@@ -162,12 +162,9 @@ class _E2BExecutor:
                 elapsed_s = elapsed_ms / 1000.0
                 cost = elapsed_s * _COST_PER_SECOND_USD
 
-                stdout = "\n".join(
-                    str(r.text) for r in execution.results if hasattr(r, "text") and r.text
-                )
                 logs_out = getattr(execution.logs, "stdout", [])
                 logs_err = getattr(execution.logs, "stderr", [])
-                stdout_full = stdout + "\n".join(logs_out)
+                stdout_full = "\n".join(logs_out)
                 stderr_full = "\n".join(logs_err)
 
                 success = execution.error is None
