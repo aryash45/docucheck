@@ -1,26 +1,4 @@
-"""
-src/ingestion/claim_extractor.py
----------------------------------
-DocumentClaimExtractor — extracts verifiable atomic claims from a
-ParsedDocument, producing list[Claim] ready for the fact-checker pipeline.
 
-Two-tier extraction
--------------------
-  1. LLM tier (Gemini 1.5 Flash): prompt each chunk, parse returned JSON.
-  2. Heuristic fallback: regex signals for declarative, checkable sentences
-     (numbers, comparatives, methodology keywords).
-
-Deduplication
--------------
-  Jaccard similarity on word sets — claims with >0.65 overlap are merged.
-  This keeps the claim list tight without embedding calls.
-
-Integration point
------------------
-  Returns list[src.tree.state.Claim] — same dataclass used throughout the
-  existing pipeline, so the output slots directly into ResearchState.claims
-  with no conversion layer needed.
-"""
 
 from __future__ import annotations
 
