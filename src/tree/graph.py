@@ -56,11 +56,18 @@ from .nodes import (
 
 logger = logging.getLogger(__name__)
 
-# Ordered sequence of (name, callable) pairs — the pipeline edges
+# Full 5-node pipeline (Mode 1 — Research Scaffold)
 _PIPELINE: list[tuple[str, Any]] = [
     ("planner",         planner_node),
     ("executor",        executor_node),
     ("verifier",        verifier_node),
+    ("claim_extractor", claim_extractor_node),
+    ("fact_checker",    fact_checker_node),
+]
+
+# Fact-check-only pipeline (Mode 3 — Fact Check uploaded document)
+# Skips planner/executor/verifier; claims are pre-populated by IngestionPipeline.
+_FACT_CHECK_PIPELINE: list[tuple[str, Any]] = [
     ("claim_extractor", claim_extractor_node),
     ("fact_checker",    fact_checker_node),
 ]
@@ -152,7 +159,7 @@ class ResearchGraph:
     def run_from_state(self, state: ResearchState) -> ResearchState:
         """
         Lower-level entry point: accepts a pre-built ResearchState,
-        runs the pipeline, and returns the mutated state (not the dict).
+        runs the full pipeline, and returns the mutated state (not the dict).
         Useful for testing individual nodes or resuming partial runs.
         """
         for step_name, node_fn in _PIPELINE:
@@ -162,4 +169,48 @@ class ResearchGraph:
                 state.errors.append(f"Node '{step_name}' raised: {exc}")
                 logger.error("ResearchGraph: %s raised: %s", step_name, exc, exc_info=True)
         state.output = state.to_output_dict()
+        return state
+
+    def run_fact_check_only(self, state: ResearchState) -> ResearchState:
+        """
+        Mode 3 — Fact Check an uploaded document.
+
+        Accepts a ResearchState whose ``claims`` field has already been
+        populated by ``IngestionPipeline.run()``.  Runs only the
+        ClaimExtractor and FactChecker nodes, bypassing the Planner,
+        Executor, and Verifier.
+
+        Parameters
+        ----------
+        state : ResearchState
+            Must have ``state.claims`` populated before calling this method.
+            ``state.papers`` should ideally contain a literature corpus for
+            fact-checking context (can be empty; verdicts will be UNVERIFIABLE).
+
+        Returns
+        -------
+        ResearchState
+            Mutated state with ``state.verifications`` and ``state.output`` set.
+        """
+        logger.info(
+            "ResearchGraph.run_fact_check_only: claims=%d papers=%d",
+            len(state.claims), len(state.papers),
+        )
+        t0 = time.monotonic()
+
+        for step_name, node_fn in _FACT_CHECK_PIPELINE:
+            logger.info("ResearchGraph: → %s (fact-check-only)", step_name)
+            try:
+                state = node_fn(state)
+            except Exception as exc:
+                state.errors.append(f"Node '{step_name}' raised: {exc}")
+                logger.error("ResearchGraph: %s raised: %s", step_name, exc, exc_info=True)
+
+        state.output = state.to_output_dict()
+        logger.info(
+            "ResearchGraph.run_fact_check_only: done in %.2fs | verified=%d errors=%d",
+            time.monotonic() - t0,
+            len(state.verifications),
+            len(state.errors),
+        )
         return state
