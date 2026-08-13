@@ -156,7 +156,7 @@ class _E2BExecutor:
         start = time.monotonic()
 
         try:
-            with Sandbox(timeout=self.timeout) as sbx:
+            with Sandbox.create(timeout=self.timeout) as sbx:
                 execution = sbx.run_code(full_code)
                 elapsed_ms = int((time.monotonic() - start) * 1000)
                 elapsed_s = elapsed_ms / 1000.0

@@ -1,18 +1,4 @@
-"""
-src/tree/nodes.py
------------------
-Individual pipeline nodes for the plan-execute-verify loop.
 
-Each node:
-  • Accepts a ResearchState
-  • Does exactly one job
-  • Returns the mutated ResearchState
-  • Never raises — errors are appended to state.errors
-
-LLM calls use the Gemini REST API when GEMINI_API_KEY is set.
-When no key is present every node uses a deterministic heuristic fallback
-so the pipeline and tests always run offline.
-"""
 
 from __future__ import annotations
 
