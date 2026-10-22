@@ -58,7 +58,7 @@ class IngestionPipeline:
         self,
         file_path: str | Path,
         topic: str = "",
-        papers: list = [],
+        papers: list | None = None,
     ) -> ResearchState:
         """
         Parse the file, extract claims, and return a ready ResearchState.
@@ -113,7 +113,7 @@ class IngestionPipeline:
         # Step 4: Build ResearchState
         state = ResearchState(
             topic=effective_topic,
-            papers=list(papers),
+            papers=[] if papers is None else list(papers),
             claims=claims,
             budget_usd=self.budget_usd,
         )

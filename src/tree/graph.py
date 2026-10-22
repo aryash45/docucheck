@@ -110,11 +110,16 @@ _PIPELINE: list[tuple[str, Any]] = [
 ]
 
 # Fact-check-only pipeline (Mode 3 — Fact Check uploaded document)
-# Skips planner/executor/verifier; claims are pre-populated by IngestionPipeline.
+# Skips planner/executor/verifier/claim extraction; claims are pre-populated
+# by IngestionPipeline and must retain their ingestion IDs.
 _FACT_CHECK_PIPELINE: list[tuple[str, Any]] = [
-    ("claim_extractor", claim_extractor_node),
     ("fact_checker",    fact_checker_node),
 ]
+
+_EMPTY_FACT_CHECK_ERROR = (
+    "Fact-check run received pre-populated claims but produced no claims "
+    "or verifications."
+)
 
 
 class ResearchGraph:
@@ -211,8 +216,8 @@ class ResearchGraph:
 
         Accepts a ResearchState whose ``claims`` field has already been
         populated by ``IngestionPipeline.run()``.  Runs only the
-        ClaimExtractor and FactChecker nodes, bypassing the Planner,
-        Executor, and Verifier.
+        FactChecker only, bypassing the Planner, Executor, Verifier, and
+        ClaimExtractor nodes so ingestion claims and IDs remain unchanged.
 
         Parameters
         ----------
@@ -231,10 +236,22 @@ class ResearchGraph:
             len(state.claims), len(state.papers),
         )
         t0 = time.monotonic()
+        input_claim_count = len(state.claims)
 
         for step_name, node_fn in _FACT_CHECK_PIPELINE:
             logger.info("ResearchGraph: → %s (fact-check-only)", step_name)
             state = _run_traced_node(state, step_name, node_fn)
+
+        if input_claim_count > 0 and (not state.claims or not state.verifications):
+            state.errors.append(_EMPTY_FACT_CHECK_ERROR)
+            logger.error(
+                "ResearchGraph.run_fact_check_only: %s input=%d output_claims=%d "
+                "verifications=%d",
+                _EMPTY_FACT_CHECK_ERROR,
+                input_claim_count,
+                len(state.claims),
+                len(state.verifications),
+            )
 
         state.output = state.to_output_dict()
         logger.info(

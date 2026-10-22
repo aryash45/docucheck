@@ -1,16 +1,9 @@
-# Autonomous Researcher (DocuCheck)
+# DocuCheck
 
-> **Multi-Agent AI Research System — Scaffold, Verify & Fact-Check Research on Any Topic**
+> **Python research graph for document claim extraction and best-effort fact-checking**
 
-[![Build Status](https://img.shields.io/badge/build-17%20passed-brightgreen.svg?style=for-the-badge&logo=pytest)](tests)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 [![Python Version](https://img.shields.io/badge/Python-3.11%2B-blue.svg?style=for-the-badge&logo=python)](https://python.org)
-[![LLM Ensembles](https://img.shields.io/badge/LLMs-Gemini%20%7C%20Claude%20%7C%20GPT--4o%20%7C%20DeepSeek-4285F4.svg?style=for-the-badge)](https://aistudio.google.com)
-[![Code Style: Black](https://img.shields.io/badge/code%20style-black-000000.svg?style=for-the-badge)](https://github.com/psf/black)
-
----
-
-![Autonomous Researcher Demo](docs/assets/demo.gif)
+[![Tests](https://img.shields.io/badge/tests-local%20suite%20offline-2ea44f.svg?style=for-the-badge&logo=pytest)](tests)
 
 ---
 
@@ -28,9 +21,9 @@ Unlike tools like Undermind or Elicit that merely find and summarize sources, Au
 
 ### Operational Modes
 
-1. **Research Scaffold** — Generate a verified research framework from any topic.
-2. **Improve** — Upload your draft, get specific improvements based on literature evidence.
-3. **Fact Check** — Verify every claim in an existing paper or document.
+1. **Research Scaffold** — Generate a research framework from a topic and literature corpus.
+2. **Improve** — Planned; draft improvement is not implemented yet.
+3. **Fact Check** — Extract claims from an existing document and check them against supplied literature.
 
 ---
 
@@ -38,19 +31,21 @@ Unlike tools like Undermind or Elicit that merely find and summarize sources, Au
 
 | Category | Technologies |
 | :--- | :--- |
-| **Frontend** | Next.js 14, Tailwind CSS, TypeScript |
-| **Backend API** | Python 3.11+, FastAPI (Streaming SSE), Pydantic v2, AsyncIO |
-| **LLM Orchestration** | Gemini 1.5 Flash, Claude Opus 4.7, GPT-4o, DeepSeek R1, Qwen3-Max |
+| **Runtime** | Python 3.11+ |
+| **LLM assistance** | Gemini 1.5 Flash REST API, with deterministic heuristic fallbacks |
 | **Vector Search & ML** | FAISS (`faiss-cpu`), `sentence-transformers` (`all-MiniLM-L6-v2`), NumPy |
-| **Literature Ingestion** | Semantic Scholar API, OpenAlex API, ArXiv API, Tenacity (Retries) |
-| **Code Execution Sandbox** | E2B Code Interpreter (`E2B_API_KEY`), Subprocess Sandbox |
-| **Testing & Quality** | PyTest 8.x, PyTest-Asyncio, PyTest-Mock |
+| **Literature Ingestion** | Semantic Scholar API, OpenAlex API, requests, Tenacity |
+| **Document Ingestion** | PDF, DOCX, Markdown, and plain-text parsing |
+| **Code Execution** | Optional E2B Code Interpreter (`E2B_API_KEY`); local fallback for development only |
+| **Testing & Quality** | PyTest 8.x with local and integration markers |
+
+The web frontend, FastAPI streaming API, multi-provider LLM ensemble, and ArXiv fetcher remain planned rather than implemented.
 
 ---
 
 ## 🏗️ System Architecture
 
-Autonomous Researcher processes research queries through a plan-execute-verify graph pipeline:
+DocuCheck currently processes research queries and uploaded documents through a plan-execute-verify graph pipeline:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -60,7 +55,7 @@ Autonomous Researcher processes research queries through a plan-execute-verify g
                                ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                 Stage 1: Literature Pipeline                │
-│ ──▶ Fetch Papers (Semantic Scholar / OpenAlex / ArXiv)      │
+│ ──▶ Fetch Papers (Semantic Scholar / OpenAlex)              │
 │ ──▶ Generate Embeddings & Index in FAISS Vector Store       │
 └──────────────────────────────┬──────────────────────────────┘
                                │
@@ -73,8 +68,8 @@ Autonomous Researcher processes research queries through a plan-execute-verify g
 │ └────────┬─────────┘                                        │
 │          │                                                  │
 │          ▼                                                  │
-│ ┌──────────────────┐    Retrieves vector evidence & executes│
-│ │  executor_node   │ ──▶ quantitative code in E2B sandbox   │
+│ ┌──────────────────┐    Retrieves evidence & optionally    │
+│ │  executor_node   │ ──▶ executes quantitative analysis    │
 │ └────────┬─────────┘                                        │
 │          │                                                  │
 │          ▼                                                  │
@@ -95,10 +90,10 @@ Autonomous Researcher processes research queries through a plan-execute-verify g
                                │
                                ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                 Stage 3: FastAPI & Next.js                  │
-│ ──▶ Streaming JSON via FastAPI SSE                          │
-│ ──▶ Interactive Next.js Frontend Dashboard                  │
-│ ──▶ Exportable Markdown Audit Reports (Scaffold / Fact-Check)│
+│                 Stage 3: Python output                      │
+│ ──▶ Structured state and node-level trace                  │
+│ ──▶ Optional Markdown report generation                     │
+│ ──▶ Web/API shell planned for a later phase                 │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -109,6 +104,10 @@ Autonomous Researcher processes research queries through a plan-execute-verify g
 ```
 docucheck/
 ├── src/
+│   ├── ingestion/
+│   │   ├── parser.py          # PDF, DOCX, Markdown, and text parsing
+│   │   ├── chunker.py         # Document chunking helpers
+│   │   └── claim_extractor.py # Document claim extraction
 │   ├── literature/
 │   │   └── fetcher.py        # Semantic Scholar, OpenAlex & FAISS cache
 │   ├── sandbox/
@@ -119,11 +118,12 @@ docucheck/
 │   │   └── graph.py          # ResearchGraph pipeline state machine
 │   ├── writer/
 │   │   └── scaffold_writer.py# Markdown report & fact-check card generator
-│   ├── observability/        # Logging & telemetry hooks
-│   └── reviewer/             # Verification review modules
+│   ├── observability/        # Reserved for future logging/telemetry hooks
+│   └── reviewer/             # Reserved for future review modules
 ├── tests/
-│   ├── test_literature.py    # Ingestion & FAISS cache unit tests
-│   └── test_tree.py          # ResearchGraph & node pipeline integration tests
+│   ├── test_ingestion.py     # Local document-ingestion tests
+│   ├── test_tree.py          # Local graph and sandbox tests
+│   └── test_literature.py    # Marked integration/API/model tests
 ├── cache/                    # Local literature & FAISS vector cache
 ├── outputs/                  # Generated scaffold & audit reports
 ├── .env.example              # Environment variables template
@@ -171,15 +171,15 @@ docucheck/
    ```bash
    cp .env.example .env
    ```
-   *Note: Autonomous Researcher works out of the box with offline heuristic fallbacks if no API keys are configured.*
+    *Note: DocuCheck works out of the box with offline heuristic fallbacks if no API keys are configured.*
 
 ---
 
 ## 💡 Usage
 
-### API & Output
+### Python API & Output
 
-Autonomous Researcher returns structured JSON via a FastAPI streaming API consumed by a Next.js frontend. Markdown exports available for download.
+DocuCheck returns a structured dictionary from `ResearchGraph.run()` or a `ResearchState` from `run_fact_check_only()`. Markdown report generation is available through the writer module. A web/API shell is planned but is not currently present.
 
 ### Running via Python API
 
@@ -208,20 +208,22 @@ print(result.summary())
 
 ## 🧪 Testing & Quality Assurance
 
-Autonomous Researcher includes a comprehensive test suite covering the literature pipeline, FAISS vector cache, E2B executor, and graph state machine.
+DocuCheck includes a deterministic local suite plus separately marked integration tests for live literature APIs and FAISS/model downloads.
 
 Run all tests using `pytest`:
 
 ```bash
-# Run complete test suite
+# Run the default local suite; integration tests are excluded by pytest.ini
 python -m pytest
 
-# Run with verbose output
+# Run the local suite with verbose output
 python -m pytest -vv
 
-# Run specific test modules
+# Run specific local modules
 python -m pytest tests/test_tree.py
-python -m pytest tests/test_literature.py
+
+# Run the live/API/model integration suite explicitly
+python -m pytest -m integration
 ```
 
 ---
@@ -235,9 +237,3 @@ Contributions are welcome! To contribute:
 3. Commit your changes (`git commit -m 'feat: Add amazing feature'`).
 4. Push to the branch (`git push origin feature/amazing-feature`).
 5. Open a Pull Request.
-
----
-
-## 📄 License
-
-Distributed under the **MIT License**. See [`LICENSE`](LICENSE) for details.

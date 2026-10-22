@@ -20,6 +20,8 @@ import pytest
 
 sys.path.insert(0, ".")
 
+pytestmark = pytest.mark.local
+
 # ---------------------------------------------------------------------------
 # Fixtures & helpers
 # ---------------------------------------------------------------------------
@@ -246,6 +248,26 @@ class TestDocumentClaimExtractor:
 # ---------------------------------------------------------------------------
 
 class TestIngestionPipeline:
+    def test_papers_default_to_none_without_shared_state(self, tmp_path):
+        from inspect import signature
+
+        from src.ingestion.pipeline import IngestionPipeline
+
+        papers_parameter = signature(IngestionPipeline.run).parameters["papers"]
+        assert papers_parameter.default is None
+
+        f = tmp_path / "paper.txt"
+        f.write_text("A short document with enough content for parsing.", encoding="utf-8")
+
+        pipeline = IngestionPipeline()
+        with patch("src.ingestion.claim_extractor._call_gemini", return_value=None):
+            first = pipeline.run(f, topic="first")
+            second = pipeline.run(f, topic="second")
+
+        assert first.papers == []
+        assert second.papers == []
+        assert first.papers is not second.papers
+
     def test_run_produces_research_state(self, tmp_path):
         from src.ingestion.pipeline import IngestionPipeline
         from src.tree.state import ResearchState

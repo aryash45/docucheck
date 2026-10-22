@@ -67,6 +67,8 @@ MOCK_PAPERS_OA = [
 
 import pytest
 
+pytestmark = [pytest.mark.integration, pytest.mark.slow]
+
 
 def _get_ss_papers():
     fetcher = SemanticScholarFetcher()

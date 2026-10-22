@@ -10,15 +10,19 @@ All nodes have heuristic fallbacks, so the test always passes.
 
 import sys
 import logging
+import os
 import shutil
+import pytest
 
 sys.path.insert(0, ".")
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s — %(message)s")
 
+pytestmark = pytest.mark.local
+
 from src.literature.fetcher import Paper
 from src.tree.graph import ResearchGraph
-from src.tree.state import ResearchState
+from src.tree.state import Claim, ResearchState
 from src.sandbox.executor import SandboxExecutor, SandboxResult
 
 # ---------------------------------------------------------------------------
@@ -327,6 +331,79 @@ def test_run_from_state():
     print(f"[OK] state.angles={len(final_state.angles)} claims={len(final_state.claims)}")
 
 
+def test_fact_check_only_preserves_ingested_claims():
+    """Mode 3 must not wipe claims pre-populated by ingestion."""
+    print("\n--- TEST S3-10: fact-check-only preserves ingested claims ---")
+    os.environ["GEMINI_API_KEY"] = "your_dummy"
+    os.environ["E2B_API_KEY"] = "your_dummy"
+
+    state = ResearchState(
+        topic=TOPIC,
+        papers=MOCK_PAPERS,
+        claims=[
+            Claim(
+                claim_id="ingested_claim_0",
+                angle_id="ingested_document",
+                text="The Transformer architecture is based entirely on attention mechanisms.",
+                source_titles=["Attention Is All You Need"],
+            )
+        ],
+    )
+
+    final_state = ResearchGraph(budget_usd=0.10).run_fact_check_only(state)
+
+    assert [claim.claim_id for claim in final_state.claims] == ["ingested_claim_0"]
+    assert len(final_state.verifications) == 1
+    assert final_state.verifications[0].claim_id == "ingested_claim_0"
+    assert [event.node for event in final_state.trace] == ["fact_checker"]
+    assert final_state.errors == []
+    print(
+        f"[OK] claims={len(final_state.claims)} "
+        f"verifications={len(final_state.verifications)}"
+    )
+
+
+def test_fact_check_only_reports_empty_result(monkeypatch):
+    """Mode 3 reports an explicit error if fact-checking loses its input."""
+    print("\n--- TEST S3-11: fact-check-only empty-result guardrail ---")
+    os.environ["GEMINI_API_KEY"] = "your_dummy"
+    os.environ["E2B_API_KEY"] = "your_dummy"
+
+    def drop_claims(state):
+        state.claims = []
+        state.verifications = []
+        return state
+
+    import src.tree.graph as graph_module
+
+    monkeypatch.setattr(
+        graph_module,
+        "_FACT_CHECK_PIPELINE",
+        [("fact_checker", drop_claims)],
+    )
+
+    state = ResearchState(
+        topic=TOPIC,
+        papers=MOCK_PAPERS,
+        claims=[
+            Claim(
+                claim_id="ingested_claim_0",
+                angle_id="ingested_document",
+                text="A claim that should not disappear.",
+                source_titles=[],
+            )
+        ],
+    )
+
+    final_state = ResearchGraph().run_fact_check_only(state)
+
+    assert final_state.errors
+    assert "produced no claims or verifications" in final_state.errors[-1]
+    assert final_state.output is not None
+    assert final_state.output["errors"] == final_state.errors
+    print(f"[OK] guardrail error: {final_state.errors[-1]}")
+
+
 # ---------------------------------------------------------------------------
 # Runner
 # ---------------------------------------------------------------------------
@@ -356,6 +433,8 @@ if __name__ == "__main__":
         test_graph_records_trace,
         test_graph_no_papers,
         test_run_from_state,
+        test_fact_check_only_preserves_ingested_claims,
+        test_fact_check_only_reports_empty_result,
     ]
 
     all_tests = s2_tests + s3_tests
