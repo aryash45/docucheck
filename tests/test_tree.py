@@ -260,7 +260,7 @@ def test_graph_full_run_structure():
     graph = ResearchGraph(budget_usd=0.10, max_angles=3, evidence_score_threshold=0.0)
     output = graph.run(topic=TOPIC, papers=MOCK_PAPERS)
 
-    required_keys = {"topic", "angles", "evidence", "scores", "claims", "verifications", "budget"}
+    required_keys = {"topic", "angles", "evidence", "scores", "claims", "verifications", "budget", "trace"}
     missing = required_keys - output.keys()
     assert not missing, f"Output missing keys: {missing}"
 
@@ -270,6 +270,7 @@ def test_graph_full_run_structure():
     assert isinstance(output["scores"], list)
     assert isinstance(output["claims"], list)
     assert isinstance(output["verifications"], list)
+    assert isinstance(output["trace"], list)
     assert "allocated_usd" in output["budget"]
     assert "spent_usd" in output["budget"]
 
@@ -281,9 +282,29 @@ def test_graph_full_run_structure():
           f"spent=${output['budget']['spent_usd']}")
 
 
+def test_graph_records_trace():
+    """Graph output includes one audit trace event per executed node."""
+    print("\n--- TEST S3-7: Graph records audit trace ---")
+    graph = ResearchGraph(budget_usd=0.10, max_angles=2, evidence_score_threshold=0.0)
+    output = graph.run(topic=TOPIC, papers=MOCK_PAPERS)
+
+    expected_nodes = ["planner", "executor", "verifier", "claim_extractor", "fact_checker"]
+    trace = output["trace"]
+
+    assert [event["node"] for event in trace] == expected_nodes
+    for event in trace:
+        assert event["status"] in {"ok", "error"}
+        assert event["started_at"]
+        assert event["duration_ms"] >= 0
+        assert "inputs" in event
+        assert "outputs" in event
+        assert "errors" in event["outputs"]
+    print(f"[OK] trace captured for {len(trace)} nodes")
+
+
 def test_graph_no_papers():
     """Graph handles empty paper list gracefully — no crash."""
-    print("\n--- TEST S3-7: Graph with no papers (graceful degradation) ---")
+    print("\n--- TEST S3-8: Graph with no papers (graceful degradation) ---")
     graph = ResearchGraph(budget_usd=0.10, max_angles=2, evidence_score_threshold=0.0)
     output = graph.run(topic="quantum computing error correction", papers=[])
     assert "angles" in output
@@ -293,7 +314,7 @@ def test_graph_no_papers():
 
 def test_run_from_state():
     """run_from_state() returns a ResearchState with output populated."""
-    print("\n--- TEST S3-8: run_from_state() returns ResearchState ---")
+    print("\n--- TEST S3-9: run_from_state() returns ResearchState ---")
     from src.tree.state import ResearchState as RS
     graph = ResearchGraph(budget_usd=0.10, max_angles=2, evidence_score_threshold=0.0)
     state = RS(topic=TOPIC, papers=MOCK_PAPERS, max_angles=2)
@@ -332,6 +353,7 @@ if __name__ == "__main__":
         test_graph_produces_claims,
         test_graph_produces_verifications,
         test_graph_full_run_structure,
+        test_graph_records_trace,
         test_graph_no_papers,
         test_run_from_state,
     ]

@@ -43,9 +43,10 @@ from __future__ import annotations
 
 import logging
 import time
+from datetime import datetime, timezone
 from typing import Any
 
-from .state import ResearchState
+from .state import PipelineTraceEvent, ResearchState
 from .nodes import (
     planner_node,
     executor_node,
@@ -55,6 +56,49 @@ from .nodes import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+def _state_counts(state: ResearchState) -> dict[str, int]:
+    return {
+        "papers": len(state.papers),
+        "angles": len(state.angles),
+        "evidence": len(state.evidence),
+        "scores": len(state.scores),
+        "claims": len(state.claims),
+        "verifications": len(state.verifications),
+        "errors": len(state.errors),
+    }
+
+
+def _run_traced_node(state: ResearchState, step_name: str, node_fn: Any) -> ResearchState:
+    started_at = _utc_now()
+    step_start = time.monotonic()
+    inputs = _state_counts(state)
+    status = "ok"
+    error = ""
+
+    try:
+        state = node_fn(state)
+    except Exception as exc:
+        status = "error"
+        error = str(exc)
+        state.errors.append(f"Node '{step_name}' raised: {exc}")
+        logger.error("ResearchGraph: %s raised: %s", step_name, exc, exc_info=True)
+
+    state.trace.append(PipelineTraceEvent(
+        node=step_name,
+        status=status,
+        started_at=started_at,
+        duration_ms=round((time.monotonic() - step_start) * 1000),
+        inputs=inputs,
+        outputs=_state_counts(state),
+        error=error,
+    ))
+    return state
 
 # Full 5-node pipeline (Mode 1 — Research Scaffold)
 _PIPELINE: list[tuple[str, Any]] = [
@@ -131,13 +175,7 @@ class ResearchGraph:
         for step_name, node_fn in _PIPELINE:
             logger.info("ResearchGraph: → %s", step_name)
             step_start = time.monotonic()
-            try:
-                state = node_fn(state)
-            except Exception as exc:
-                # Non-fatal: log and continue so downstream nodes still run
-                msg = f"Node '{step_name}' raised: {exc}"
-                state.errors.append(msg)
-                logger.error("ResearchGraph: %s", msg, exc_info=True)
+            state = _run_traced_node(state, step_name, node_fn)
             logger.info(
                 "ResearchGraph: ← %s (%.2fs)", step_name, time.monotonic() - step_start
             )
@@ -163,11 +201,7 @@ class ResearchGraph:
         Useful for testing individual nodes or resuming partial runs.
         """
         for step_name, node_fn in _PIPELINE:
-            try:
-                state = node_fn(state)
-            except Exception as exc:
-                state.errors.append(f"Node '{step_name}' raised: {exc}")
-                logger.error("ResearchGraph: %s raised: %s", step_name, exc, exc_info=True)
+            state = _run_traced_node(state, step_name, node_fn)
         state.output = state.to_output_dict()
         return state
 
@@ -200,11 +234,7 @@ class ResearchGraph:
 
         for step_name, node_fn in _FACT_CHECK_PIPELINE:
             logger.info("ResearchGraph: → %s (fact-check-only)", step_name)
-            try:
-                state = node_fn(state)
-            except Exception as exc:
-                state.errors.append(f"Node '{step_name}' raised: {exc}")
-                logger.error("ResearchGraph: %s raised: %s", step_name, exc, exc_info=True)
+            state = _run_traced_node(state, step_name, node_fn)
 
         state.output = state.to_output_dict()
         logger.info(

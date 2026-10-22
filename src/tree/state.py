@@ -65,6 +65,18 @@ class ClaimVerification:
     verdict: str           # "SUPPORTED" | "REFUTED" | "UNVERIFIABLE"
 
 
+@dataclass
+class PipelineTraceEvent:
+    """Audit record for one graph node execution."""
+    node: str
+    status: str            # "ok" | "error"
+    started_at: str        # ISO-8601 UTC timestamp
+    duration_ms: int
+    inputs: dict
+    outputs: dict
+    error: str = ""
+
+
 # ---------------------------------------------------------------------------
 # Main pipeline state
 # ---------------------------------------------------------------------------
@@ -110,6 +122,9 @@ class ResearchState:
 
     # ---- Final structured output ----
     output: Optional[dict] = None     # produced by graph after all nodes
+
+    # ---- Audit trail ----
+    trace: list[PipelineTraceEvent] = field(default_factory=list)
 
     # ---- Internal bookkeeping ----
     errors: list[str] = field(default_factory=list)   # non-fatal warnings / errors
@@ -179,5 +194,17 @@ class ResearchState:
                 "allocated_usd": self.budget_usd,
                 "spent_usd": round(self.spent_usd, 6),
             },
+            "trace": [
+                {
+                    "node": event.node,
+                    "status": event.status,
+                    "started_at": event.started_at,
+                    "duration_ms": event.duration_ms,
+                    "inputs": event.inputs,
+                    "outputs": event.outputs,
+                    "error": event.error,
+                }
+                for event in self.trace
+            ],
             "errors": self.errors,
         }
