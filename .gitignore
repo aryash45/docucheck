@@ -21,6 +21,7 @@ cache/*
 outputs/*
 !outputs/.gitkeep
 
-# IDEs
+# IDEs and local tooling
 .vscode/
 .idea/
+.backboard/
