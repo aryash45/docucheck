@@ -50,7 +50,7 @@ Labels: `supported`, `refuted`, `unverifiable`.
 | Per-class P/R/F1 | For supported, refuted, unverifiable |
 | Confidently-wrong rate | Wrong + confidence > threshold |
 | Abstention rate | % predicted unverifiable |
-| Retrieval recall@k | Gold evidence in top-k retrieved (when labels exist) |
+| Retrieval recall@k | Gold evidence IDs present in the predicted evidence IDs (when labels exist) |
 
 ## Output structure
 
@@ -63,3 +63,8 @@ outputs/evals/<timestamp>/
 
 `outputs/evals/index.jsonl` — one summary row per run.
 `evals/results/CHANGELOG.md` — curated metrics changelog for resume/demo.
+
+The current Phase 1 runner uses gold evidence passages as deterministic paper
+context so the verifier can be evaluated without network calls. Its retrieval
+recall is therefore a context/evidence-ID plumbing check, not a claim about a
+production retriever. Phase 2 should replace that fixture with real retrieval.

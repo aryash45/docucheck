@@ -102,11 +102,17 @@ def _run_single_claim(eval_claim: EvalClaim, provider: str) -> Prediction:
 
     if state.verifications:
         v = state.verifications[0]
+        selected_titles = set(v.supporting_sources + v.contradicting_sources)
+        evidence_ids = [
+            paper.paper_id
+            for paper in papers
+            if paper.title in selected_titles and paper.paper_id
+        ]
         return Prediction(
             claim_id=eval_claim.id,
             predicted_label=v.verdict,
             confidence=v.confidence,
-            evidence_ids=[],
+            evidence_ids=evidence_ids,
             fallback_used=(provider != "gemini"),
         )
 
@@ -156,6 +162,11 @@ def run_eval(dataset_path: str, provider: str = "heuristic", notes: str = "") ->
         dataset=Path(dataset_path).name,
         provider=provider,
         model="gemini-1.5-flash" if provider == "gemini" else "none",
+        thresholds={"confidence": 0.6},
+        environment={
+            "forced_heuristic": provider != "gemini",
+            "gold_evidence_as_context": True,
+        },
         notes=notes,
     )
 
@@ -185,8 +196,41 @@ def run_eval(dataset_path: str, provider: str = "heuristic", notes: str = "") ->
     with index_path.open("a", encoding="utf-8") as f:
         f.write(summary.to_json() + "\n")
 
+    _append_changelog_row(
+        date=datetime.now(timezone.utc).date().isoformat(),
+        git_sha=git_sha,
+        dataset=Path(dataset_path).name,
+        provider=provider,
+        change=notes or f"{provider} baseline",
+        metrics=metrics,
+    )
+
     logger.info("Results written to %s", out_dir)
     return out_dir
+
+
+def _append_changelog_row(
+    *, date: str, git_sha: str, dataset: str, provider: str,
+    change: str, metrics,
+) -> None:
+    """Append one measured run to the human-readable metrics changelog."""
+    changelog = Path("evals/results/CHANGELOG.md")
+    changelog.parent.mkdir(parents=True, exist_ok=True)
+    if not changelog.exists():
+        changelog.write_text(
+            "# DocuCheck Eval Metrics Changelog\n\n"
+            "| Date | Git SHA | Dataset | Provider | Change | Accuracy | F1 Macro | Conf-Wrong | Abstention | Notes |\n"
+            "|------|---------|---------|----------|--------|----------|----------|------------|------------|-------|\n",
+            encoding="utf-8",
+        )
+    row = (
+        f"| {date} | {git_sha} | {dataset} | {provider} | {change.replace('|', '/')} | "
+        f"{metrics.accuracy:.4f} | {metrics.f1_macro:.4f} | "
+        f"{metrics.confidently_wrong_rate:.4f} | {metrics.abstention_rate:.4f} | "
+        f"retrieval_recall={metrics.retrieval_recall_at_k} ({metrics.retrieval_claims} claims) |\n"
+    )
+    with changelog.open("a", encoding="utf-8") as f:
+        f.write(row)
 
 
 def main():

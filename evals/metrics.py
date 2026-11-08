@@ -36,6 +36,7 @@ class EvalMetrics:
     confidently_wrong_rate: float = 0.0
     abstention_rate: float = 0.0
     retrieval_recall_at_k: float | None = None
+    retrieval_claims: int = 0
     num_claims: int = 0
     num_correct: int = 0
     num_confidently_wrong: int = 0
@@ -116,8 +117,22 @@ def compute_metrics(
         per_class.append(ClassMetrics(label=label, precision=p, recall=r, f1=f1, support=gold_counts[label]))
         f1_sum += f1
 
-    # Retrieval recall (if any gold evidence exists)
-    retrieval_recall = None  # Placeholder — needs evidence IDs in predictions
+    # Retrieval recall (if any gold evidence exists). This is intentionally
+    # computed from IDs supplied by the runner rather than from verdict text.
+    # A future retriever can populate Prediction.evidence_ids without changing
+    # the metric implementation.
+    retrieval_recalls: list[float] = []
+    for claim in claims:
+        gold_ids = {e.source_id for e in claim.gold_evidence if e.source_id}
+        if not gold_ids:
+            continue
+        pred = pred_map.get(claim.id)
+        predicted_ids = set(pred.evidence_ids) if pred else set()
+        retrieval_recalls.append(len(gold_ids & predicted_ids) / len(gold_ids))
+    retrieval_recall = (
+        round(sum(retrieval_recalls) / len(retrieval_recalls), 4)
+        if retrieval_recalls else None
+    )
 
     return EvalMetrics(
         accuracy=round(_safe_div(correct, n), 4),
@@ -126,6 +141,7 @@ def compute_metrics(
         confidently_wrong_rate=round(_safe_div(confidently_wrong, n), 4),
         abstention_rate=round(_safe_div(abstained, n), 4),
         retrieval_recall_at_k=retrieval_recall,
+        retrieval_claims=len(retrieval_recalls),
         num_claims=n,
         num_correct=correct,
         num_confidently_wrong=confidently_wrong,

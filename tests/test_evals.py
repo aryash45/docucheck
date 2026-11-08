@@ -75,6 +75,35 @@ def test_compute_metrics_unknown_and_malformed_labels():
     assert metrics.accuracy == round(1 / 3, 4)
 
 
+def test_compute_metrics_retrieval_recall_uses_evidence_ids():
+    claims = [
+        EvalClaim(
+            id="c1", domain="x", document_id="d1", claim="c1",
+            gold_label="supported",
+            gold_evidence=[
+                GoldEvidence(source_id="src_a", source_title="A"),
+                GoldEvidence(source_id="src_b", source_title="B"),
+            ],
+        ),
+        EvalClaim(
+            id="c2", domain="x", document_id="d1", claim="c2",
+            gold_label="unverifiable",
+        ),
+    ]
+    predictions = [
+        Prediction(
+            claim_id="c1", predicted_label="SUPPORTED", confidence=0.8,
+            evidence_ids=["src_a"],
+        ),
+        Prediction(claim_id="c2", predicted_label="UNVERIFIABLE", confidence=0.2),
+    ]
+
+    metrics = compute_metrics(claims, predictions)
+
+    assert metrics.retrieval_recall_at_k == 0.5
+    assert metrics.retrieval_claims == 1
+
+
 def test_run_eval_env_var_safety():
     # If GEMINI_API_KEY was not in os.environ, running a heuristic prediction
     # should NOT leave an empty string in os.environ
