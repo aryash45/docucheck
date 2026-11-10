@@ -14,6 +14,10 @@ python -m evals.run_eval --dataset evals/data/smoke.jsonl --provider gemini
 # Run the committed public SciFact development holdout
 python -m evals.run_eval --dataset evals/data/public/scifact_dev.jsonl \
   --provider heuristic --notes "Public SciFact dev holdout baseline"
+
+# Run the 2026 scientific-verification benchmark
+python -m evals.run_eval --dataset evals/data/public/gendata_2026.jsonl \
+  --provider heuristic --notes "Public 2026 GenData scientific verification baseline"
 ```
 
 Results are written to `outputs/evals/<timestamp>/`.

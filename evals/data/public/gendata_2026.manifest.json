@@ -1,0 +1,10 @@
+{
+  "source": "GenData-Research/scientific-verification",
+  "version": "3.0",
+  "input_rows": 150,
+  "label_counts": {
+    "supported": 69,
+    "refuted": 18,
+    "unverifiable": 63
+  }
+}

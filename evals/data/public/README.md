@@ -33,3 +33,16 @@ set because it cannot produce public gold metrics.
 python -m evals.import_scifact --split train
 python -m evals.import_scifact --split dev
 ```
+
+## 2026 scientific verification
+
+`gendata_2026.jsonl` is normalized from the public GenData scientific-verification
+v3.0 release: 150 rows over 50 NMC cathode claims, backed by 1,991 measurements
+from 227 open-access papers. The source is CC-BY-4.0. Rebuild it with:
+
+```bash
+python -m evals.import_gendata
+```
+
+This is a small, domain-specific 2026 development benchmark, not a general
+production-quality estimate.

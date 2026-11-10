@@ -28,3 +28,11 @@ The baseline is a deterministic heuristic run with gold evidence context; it
 is a reproducibility and plumbing baseline, not a production quality estimate.
 Next: plan Phase 3 around citation integrity, honest abstention, reviewer
 checks, and conflict detection using this holdout as a fixed regression set.
+
+## 2026 benchmark addition
+
+Added the public GenData scientific-verification v3.0 development release:
+150 rows over 50 NMC cathode claims, with labels supported 69, refuted 18,
+and unverifiable 63. The heuristic baseline scored 38.00% accuracy and
+25.46% macro-F1; this is expected to be domain-specific and is not a
+production estimate.

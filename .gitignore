@@ -8,6 +8,7 @@ __pycache__/
 evals/data/public/scifact/data/
 evals/data/public/scifact/data.tar.gz
 evals/data/public/scifact/._*
+evals/data/public/gendata/verification.csv
 .venv/
 env/
 venv/

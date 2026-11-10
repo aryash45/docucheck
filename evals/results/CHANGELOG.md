@@ -10,3 +10,4 @@ Curated record of eval runs for resume/demo. Only measured values after the harn
 | 2026-11-10 | 177ec74 | smoke.jsonl | heuristic | Phase 2 passage retrieval and direction baseline (fixed source IDs) | 0.6667 | 0.5761 | 0.0000 | 0.3333 | retrieval_recall=0.9231 (13 claims) |
 | 2026-11-10 | 177ec74 | smoke.jsonl | heuristic | Phase 2 citation-enabled baseline | 0.6667 | 0.5761 | 0.0000 | 0.3333 | retrieval_recall=0.9231 (13 claims) |
 | 2026-11-10 | 5cd13a1 | scifact_dev.jsonl | heuristic | Public SciFact dev holdout baseline | 0.7633 | 0.6314 | 0.0767 | 0.4233 | retrieval_recall=0.9753 (188 claims) |
+| 2026-11-10 | e23f0d9 | gendata_2026.jsonl | heuristic | Public 2026 GenData scientific verification baseline | 0.3800 | 0.2546 | 0.1000 | 0.1400 | retrieval_recall=0.98 (150 claims) |
