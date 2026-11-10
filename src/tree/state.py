@@ -55,6 +55,24 @@ class Claim:
 
 
 @dataclass
+class PassageEvidence:
+    """One auditable passage used to support or challenge a claim."""
+    evidence_id: str
+    source_id: str
+    source_title: str
+    quote: str
+    direction: str = "neutral"  # supporting | contradicting | neutral
+    score: float = 0.0
+    source_url: str = ""
+    chunk_id: str = ""
+    page_start: int | None = None
+    page_end: int | None = None
+    char_start: int | None = None
+    char_end: int | None = None
+    citation_status: str = "not_checked"
+
+
+@dataclass
 class ClaimVerification:
     """Fact-checker's verdict on a single claim."""
     claim_id: str
@@ -63,6 +81,15 @@ class ClaimVerification:
     supporting_sources: list[str]
     contradicting_sources: list[str]
     verdict: str           # "SUPPORTED" | "REFUTED" | "UNVERIFIABLE"
+    evidence: list[PassageEvidence] = field(default_factory=list)
+
+    @property
+    def direction_counts(self) -> dict[str, int]:
+        counts = {"supporting": 0, "contradicting": 0, "neutral": 0}
+        for item in self.evidence:
+            if item.direction in counts:
+                counts[item.direction] += 1
+        return counts
 
 
 @dataclass
@@ -106,6 +133,11 @@ class ResearchState:
 
     # ---- Executor outputs ----
     evidence: list[Evidence] = field(default_factory=list)
+
+    # ---- Retrieved document passages ----
+    passages: list = field(default_factory=list)
+    citation_statuses: list = field(default_factory=list)
+    resolve_citations: bool = False
 
     # ---- Verifier outputs ----
     scores: list[VerificationScore] = field(default_factory=list)
@@ -187,8 +219,40 @@ class ResearchState:
                     "verdict": v.verdict,
                     "confidence": v.confidence,
                     "supported_by": v.supporting_sources,
+                    "contradicted_by": v.contradicting_sources,
+                    "direction_counts": v.direction_counts,
+                    "evidence": [
+                        {
+                            "evidence_id": item.evidence_id,
+                            "source_id": item.source_id,
+                            "source_title": item.source_title,
+                            "source_url": item.source_url,
+                            "quote": item.quote,
+                            "direction": item.direction,
+                            "score": item.score,
+                            "chunk_id": item.chunk_id,
+                            "page_start": item.page_start,
+                            "page_end": item.page_end,
+                            "char_start": item.char_start,
+                            "char_end": item.char_end,
+                            "citation_status": item.citation_status,
+                        }
+                        for item in v.evidence
+                    ],
                 }
                 for v in self.verifications
+            ],
+            "citations": [
+                {
+                    "source_id": status.source_id,
+                    "url": status.url,
+                    "status": status.status,
+                    "http_status": status.http_status,
+                    "final_url": status.final_url,
+                    "reason": status.reason,
+                    "checked_at": status.checked_at,
+                }
+                for status in self.citation_statuses
             ],
             "budget": {
                 "allocated_usd": self.budget_usd,

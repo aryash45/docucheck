@@ -51,6 +51,8 @@ Labels: `supported`, `refuted`, `unverifiable`.
 | Confidently-wrong rate | Wrong + confidence > threshold |
 | Abstention rate | % predicted unverifiable |
 | Retrieval recall@k | Gold evidence IDs present in the predicted evidence IDs (when labels exist) |
+| Evidence-direction accuracy | Correct supporting/contradicting/neutral labels for matched evidence |
+| Citation link-resolution rate | Resolved checked URLs / checked URLs; `null` when checks are disabled |
 
 ## Output structure
 
@@ -68,3 +70,10 @@ The current Phase 1 runner uses gold evidence passages as deterministic paper
 context so the verifier can be evaluated without network calls. Its retrieval
 recall is therefore a context/evidence-ID plumbing check, not a claim about a
 production retriever. Phase 2 should replace that fixture with real retrieval.
+
+Use `--resolve-citations` only when network access is intended:
+
+```bash
+python -m evals.run_eval --dataset evals/data/smoke.jsonl \
+  --provider heuristic --resolve-citations
+```

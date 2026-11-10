@@ -58,6 +58,8 @@ class Prediction:
     predicted_label: str  # SUPPORTED / REFUTED / UNVERIFIABLE
     confidence: float
     evidence_ids: list[str] = field(default_factory=list)
+    evidence_directions: dict[str, str] = field(default_factory=dict)
+    citation_statuses: dict[str, str] = field(default_factory=dict)
     fallback_used: bool = False
     error: str = ""
 
@@ -94,6 +96,9 @@ class EvalRunSummary:
     confidently_wrong_rate: float
     abstention_rate: float
     num_claims: int
+    retrieval_recall_at_k: float | None = None
+    evidence_direction_accuracy: float | None = None
+    citation_link_resolution_rate: float | None = None
     notes: str = ""
 
     def to_json(self) -> str:

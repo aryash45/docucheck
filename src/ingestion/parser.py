@@ -66,6 +66,13 @@ class ParsedDocument:
     warnings: list[str] = field(default_factory=list)
 
     @property
+    def document_id(self) -> str:
+        """Stable local identifier used to namespace chunk and evidence IDs."""
+        if self.source_path:
+            return Path(self.source_path).stem or "document"
+        return self.title or "document"
+
+    @property
     def word_count(self) -> int:
         return len(self.text.split())
 

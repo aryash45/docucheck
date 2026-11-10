@@ -100,6 +100,28 @@ class TestTextChunker:
         for chunk in chunks:
             assert chunk.sentence_start <= chunk.sentence_end
 
+    def test_document_chunk_metadata(self):
+        from src.ingestion.chunker import TextChunker
+        from src.ingestion.parser import ParsedDocument
+
+        text = (
+            "First sentence has enough words to form useful evidence. "
+            "Second sentence carries a measurable claim for testing. "
+            "Third sentence keeps the chunk above the minimum size."
+        )
+        document = ParsedDocument(
+            text=text,
+            title="Sample",
+            source_path="sample.txt",
+        )
+        chunks = TextChunker(max_words=40, stride_sentences=1, min_chars=20).chunk_document(document)
+
+        assert chunks
+        assert chunks[0].document_id == "sample"
+        assert chunks[0].chunk_id == "sample:chunk_0"
+        assert 0 <= chunks[0].char_start < chunks[0].char_end <= len(text)
+        assert text[chunks[0].char_start:chunks[0].char_end].strip()
+
 
 # ---------------------------------------------------------------------------
 # DocumentParser

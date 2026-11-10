@@ -22,7 +22,7 @@ pytestmark = pytest.mark.local
 
 from src.literature.fetcher import Paper
 from src.tree.graph import ResearchGraph
-from src.tree.state import Claim, ResearchState
+from src.tree.state import Claim, PassageEvidence, ResearchState
 from src.sandbox.executor import SandboxExecutor, SandboxResult
 
 # ---------------------------------------------------------------------------
@@ -284,6 +284,42 @@ def test_graph_full_run_structure():
     print(f"     claims={len(output['claims'])}, verifications={len(output['verifications'])}")
     print(f"     budget: allocated=${output['budget']['allocated_usd']} "
           f"spent=${output['budget']['spent_usd']}")
+
+
+def test_passage_evidence_serializes_with_direction_counts():
+    evidence = PassageEvidence(
+        evidence_id="ev_1",
+        source_id="paper_1",
+        source_title="A Paper",
+        source_url="https://example.test/paper",
+        quote="Exact passage.",
+        direction="supporting",
+        score=0.91,
+        page_start=2,
+        page_end=2,
+        char_start=10,
+        char_end=25,
+    )
+    from src.tree.state import ClaimVerification
+    state = ResearchState(
+        claims=[Claim("c1", "doc", "A claim", ["A Paper"])],
+        verifications=[ClaimVerification(
+            claim_id="c1",
+            supported=True,
+            confidence=0.91,
+            supporting_sources=["A Paper"],
+            contradicting_sources=[],
+            verdict="SUPPORTED",
+            evidence=[evidence],
+        )],
+    )
+
+    output = state.to_output_dict()
+    verification = output["verifications"][0]
+    assert verification["direction_counts"] == {
+        "supporting": 1, "contradicting": 0, "neutral": 0,
+    }
+    assert verification["evidence"][0]["quote"] == "Exact passage."
 
 
 def test_graph_records_trace():

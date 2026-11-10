@@ -115,6 +115,7 @@ class IngestionPipeline:
             topic=effective_topic,
             papers=[] if papers is None else list(papers),
             claims=claims,
+            passages=list(self._extractor.last_chunks),
             budget_usd=self.budget_usd,
         )
 

@@ -20,6 +20,9 @@ from .state import (
     ResearchState,
     VerificationScore,
 )
+from .evidence import to_passage_evidence
+from src.retrieval.evidence import PassageRetriever
+from src.citations.resolver import CitationResolver
 
 logger = logging.getLogger(__name__)
 
@@ -479,7 +482,7 @@ def fact_checker_node(state: ResearchState) -> ResearchState:
     verifications: list[ClaimVerification] = []
 
     for claim in state.claims:
-        v = _verify_claim(claim, state.papers, state.topic)
+        v = _verify_claim(claim, state.papers, state.topic, state.passages)
         verifications.append(v)
         logger.info(
             "FactChecker: claim=%s verdict=%s confidence=%.2f",
@@ -487,13 +490,25 @@ def fact_checker_node(state: ResearchState) -> ResearchState:
         )
 
     state.verifications = verifications
+    if state.resolve_citations:
+        state.citation_statuses = CitationResolver().resolve_papers(state.papers)
     return state
 
 
-def _verify_claim(claim: Claim, papers: list, topic: str) -> ClaimVerification:
+def _verify_claim(
+    claim: Claim,
+    papers: list,
+    topic: str,
+    passages: list | None = None,
+) -> ClaimVerification:
     """
     Attempt LLM cross-reference; fall back to keyword-overlap heuristic.
     """
+    retrieved_evidence = []
+    if passages:
+        retrieved = PassageRetriever().retrieve(claim.text, passages, top_k=3)
+        retrieved_evidence = to_passage_evidence(claim.text, retrieved)
+
     # Build a small context from papers whose titles are in the claim sources
     title_set = set(claim.source_titles)
     relevant = [p for p in papers if getattr(p, "title", "") in title_set]
@@ -541,9 +556,34 @@ def _verify_claim(claim: Claim, papers: list, topic: str) -> ClaimVerification:
                 supporting_sources=[t for t in claim.source_titles if verdict == "SUPPORTED"],
                 contradicting_sources=[t for t in claim.source_titles if verdict == "REFUTED"],
                 verdict=verdict,
+                evidence=retrieved_evidence,
             )
 
-    # Heuristic fallback: keyword overlap with abstracts
+    # Heuristic fallback: use retrieved passage direction when available.
+    evidence_supporting = [e for e in retrieved_evidence if e.direction == "supporting"]
+    evidence_contradicting = [e for e in retrieved_evidence if e.direction == "contradicting"]
+    if evidence_contradicting and not evidence_supporting:
+        return ClaimVerification(
+            claim_id=claim.claim_id,
+            supported=False,
+            confidence=round(min(0.75, 0.45 + 0.1 * len(evidence_contradicting)), 3),
+            supporting_sources=[],
+            contradicting_sources=[e.source_title for e in evidence_contradicting],
+            verdict="REFUTED",
+            evidence=retrieved_evidence,
+        )
+    if evidence_supporting and not evidence_contradicting:
+        return ClaimVerification(
+            claim_id=claim.claim_id,
+            supported=True,
+            confidence=round(min(0.75, 0.45 + 0.1 * len(evidence_supporting)), 3),
+            supporting_sources=[e.source_title for e in evidence_supporting],
+            contradicting_sources=[],
+            verdict="SUPPORTED",
+            evidence=retrieved_evidence,
+        )
+
+    # Fallback for literature-only runs without document passages.
     claim_words = set(claim.text.lower().split())
     supporting = []
     contradicting = []
@@ -573,4 +613,5 @@ def _verify_claim(claim: Claim, papers: list, topic: str) -> ClaimVerification:
         supporting_sources=supporting[:3],
         contradicting_sources=contradicting[:2],
         verdict=verdict,
+        evidence=retrieved_evidence,
     )

@@ -303,6 +303,7 @@ class ScaffoldWriter:
         topic       = em.get("topic", "Unknown topic")
         claims_data = em.get("claims", [])
         verif_data  = em.get("verifications", [])
+        citation_data = em.get("citations", [])
 
         lines += [
             "# Fact-Check Card",
@@ -330,6 +331,8 @@ class ScaffoldWriter:
             f"| ✅ SUPPORTED | {verdict_counts['SUPPORTED']} |",
             f"| ❌ REFUTED | {verdict_counts['REFUTED']} |",
             f"| ⚠️ UNVERIFIABLE | {verdict_counts['UNVERIFIABLE']} |",
+            "",
+            f"**Citation checks:** {len(citation_data)} source(s) recorded",
             "",
             "---",
             "",
@@ -378,6 +381,38 @@ class ScaffoldWriter:
                 if contradicting:
                     con_str = "; ".join(f"*{s}*" for s in contradicting)
                     lines.append(f"| Contradicting sources | {con_str} |")
+
+                direction_counts = v.get("direction_counts", {})
+                if direction_counts:
+                    lines.append(
+                        "| Evidence directions | "
+                        f"supporting={direction_counts.get('supporting', 0)}, "
+                        f"contradicting={direction_counts.get('contradicting', 0)}, "
+                        f"neutral={direction_counts.get('neutral', 0)} |"
+                    )
+
+                evidence = v.get("evidence", [])
+                if evidence:
+                    lines += ["", "#### Passage evidence", ""]
+                    for item in evidence:
+                        location = []
+                        if item.get("page_start") is not None:
+                            end_page = item.get("page_end") or item.get("page_start")
+                            location.append(
+                                f"page {item['page_start']}" if end_page == item["page_start"]
+                                else f"pages {item['page_start']}-{end_page}"
+                            )
+                        if item.get("char_start") is not None:
+                            location.append(
+                                f"chars {item['char_start']}-{item.get('char_end', '')}"
+                            )
+                        where = ", ".join(location) or "location unavailable"
+                        source = item.get("source_title") or item.get("source_id", "source")
+                        lines += [
+                            f"- **{item.get('direction', 'neutral').title()}** "
+                            f"({source}; score={float(item.get('score', 0.0)):.2f}; {where})",
+                            f"  > {item.get('quote', '').replace(chr(10), ' ')}",
+                        ]
 
                 lines += ["", "---", ""]
 

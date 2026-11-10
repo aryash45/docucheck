@@ -20,6 +20,10 @@ from __future__ import annotations
 import re
 import logging
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .parser import ParsedDocument
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +43,11 @@ class TextChunk:
     text: str
     sentence_start: int   # index of first sentence in this chunk
     sentence_end: int     # index of last sentence (exclusive)
+    document_id: str = ""
+    char_start: int = 0
+    char_end: int = 0
+    page_start: int | None = None
+    page_end: int | None = None
 
 
 class TextChunker:
@@ -66,11 +75,23 @@ class TextChunker:
         self.stride_sentences = stride_sentences
         self.min_chars = min_chars
 
-    def chunk(self, text: str) -> list[TextChunk]:
-        """Split `text` into overlapping TextChunk objects."""
+    def chunk(
+        self,
+        text: str,
+        document_id: str = "",
+        page_ranges: list[tuple[int, int, int]] | None = None,
+    ) -> list[TextChunk]:
+        """Split text into chunks and attach stable location metadata.
+
+        ``page_ranges`` contains ``(char_start, char_end, page_number)`` tuples.
+        Page numbers are optional because plain text and DOCX inputs do not
+        reliably expose pagination.
+        """
         sentences = self._split_sentences(text)
         if not sentences:
             return []
+
+        sentence_spans = self._locate_sentences(text, sentences)
 
         chunks: list[TextChunk] = []
         chunk_idx = 0
@@ -92,11 +113,22 @@ class TextChunker:
 
             chunk_text = " ".join(window).strip()
             if len(chunk_text) >= self.min_chars:
+                char_start = sentence_spans[i][0]
+                char_end = sentence_spans[j - 1][1]
+                page_start, page_end = self._pages_for_span(
+                    char_start, char_end, page_ranges
+                )
+                prefix = f"{document_id}:" if document_id else ""
                 chunks.append(TextChunk(
-                    chunk_id=f"chunk_{chunk_idx}",
+                    chunk_id=f"{prefix}chunk_{chunk_idx}",
                     text=chunk_text,
                     sentence_start=i,
                     sentence_end=j,
+                    document_id=document_id,
+                    char_start=char_start,
+                    char_end=char_end,
+                    page_start=page_start,
+                    page_end=page_end,
                 ))
                 chunk_idx += 1
 
@@ -106,6 +138,25 @@ class TextChunker:
 
         logger.debug("TextChunker: %d sentences → %d chunks", len(sentences), len(chunks))
         return chunks
+
+    def chunk_document(self, document: "ParsedDocument") -> list[TextChunk]:
+        """Chunk a ParsedDocument and carry through its document/page metadata."""
+        page_ranges = None
+        if document.pages:
+            page_ranges = []
+            cursor = 0
+            for page_number, page_text in enumerate(document.pages, start=1):
+                start = document.text.find(page_text, cursor) if page_text else cursor
+                if start < 0:
+                    start = cursor
+                end = start + len(page_text)
+                page_ranges.append((start, end, page_number))
+                cursor = end + 2  # ParsedDocument joins pages with two newlines.
+        return self.chunk(
+            document.text,
+            document_id=document.document_id,
+            page_ranges=page_ranges,
+        )
 
     # ------------------------------------------------------------------
     # Internal
@@ -129,3 +180,39 @@ class TextChunker:
                 if len(cleaned) >= 15:
                     sentences.append(cleaned)
         return sentences
+
+    @staticmethod
+    def _locate_sentences(text: str, sentences: list[str]) -> list[tuple[int, int]]:
+        """Locate normalized sentence text in the original input in order."""
+        spans: list[tuple[int, int]] = []
+        cursor = 0
+        for sentence in sentences:
+            compact = " ".join(sentence.split())
+            normalized_tail = " ".join(text[cursor:].split())
+            relative = normalized_tail.find(compact)
+            if relative >= 0:
+                # Convert the normalized search back to a conservative source
+                # span. The end is exact for normal prose and still monotonic
+                # when line breaks were normalized.
+                start = cursor + relative
+                end = min(len(text), start + len(sentence))
+            else:
+                start = cursor
+                end = min(len(text), start + len(sentence))
+            spans.append((start, end))
+            cursor = max(end, cursor + 1)
+        return spans
+
+    @staticmethod
+    def _pages_for_span(
+        char_start: int,
+        char_end: int,
+        page_ranges: list[tuple[int, int, int]] | None,
+    ) -> tuple[int | None, int | None]:
+        if not page_ranges:
+            return None, None
+        pages = [
+            page for start, end, page in page_ranges
+            if char_end > start and char_start < end
+        ]
+        return (min(pages), max(pages)) if pages else (None, None)

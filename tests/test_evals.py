@@ -104,6 +104,29 @@ def test_compute_metrics_retrieval_recall_uses_evidence_ids():
     assert metrics.retrieval_claims == 1
 
 
+def test_compute_metrics_direction_and_citation_rates():
+    claims = [EvalClaim(
+        id="c1", domain="x", document_id="d1", claim="c1",
+        gold_label="supported",
+        gold_evidence=[GoldEvidence(
+            source_id="src_a", source_title="A", direction="supporting"
+        )],
+    )]
+    predictions = [Prediction(
+        claim_id="c1", predicted_label="SUPPORTED", confidence=0.8,
+        evidence_ids=["src_a"],
+        evidence_directions={"src_a": "supporting"},
+        citation_statuses={"src_a": "resolved"},
+    )]
+
+    metrics = compute_metrics(claims, predictions)
+
+    assert metrics.evidence_direction_accuracy == 1.0
+    assert metrics.evidence_direction_items == 1
+    assert metrics.citation_link_resolution_rate == 1.0
+    assert metrics.citation_links_checked == 1
+
+
 def test_run_eval_env_var_safety():
     # If GEMINI_API_KEY was not in os.environ, running a heuristic prediction
     # should NOT leave an empty string in os.environ

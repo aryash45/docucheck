@@ -37,6 +37,10 @@ class EvalMetrics:
     abstention_rate: float = 0.0
     retrieval_recall_at_k: float | None = None
     retrieval_claims: int = 0
+    evidence_direction_accuracy: float | None = None
+    evidence_direction_items: int = 0
+    citation_link_resolution_rate: float | None = None
+    citation_links_checked: int = 0
     num_claims: int = 0
     num_correct: int = 0
     num_confidently_wrong: int = 0
@@ -134,6 +138,37 @@ def compute_metrics(
         if retrieval_recalls else None
     )
 
+    direction_matches = 0
+    direction_items = 0
+    for claim in claims:
+        gold_directions = {
+            evidence.source_id: evidence.direction
+            for evidence in claim.gold_evidence
+            if evidence.source_id and evidence.direction
+        }
+        pred = pred_map.get(claim.id)
+        if not pred:
+            continue
+        for source_id, direction in pred.evidence_directions.items():
+            if source_id in gold_directions:
+                direction_items += 1
+                direction_matches += int(direction == gold_directions[source_id])
+    direction_accuracy = (
+        round(direction_matches / direction_items, 4)
+        if direction_items else None
+    )
+
+    checked_statuses = [
+        status
+        for pred in predictions
+        for status in pred.citation_statuses.values()
+        if status in {"resolved", "unresolved", "invalid"}
+    ]
+    citation_resolution = (
+        round(sum(status == "resolved" for status in checked_statuses) / len(checked_statuses), 4)
+        if checked_statuses else None
+    )
+
     return EvalMetrics(
         accuracy=round(_safe_div(correct, n), 4),
         per_class=per_class,
@@ -142,6 +177,10 @@ def compute_metrics(
         abstention_rate=round(_safe_div(abstained, n), 4),
         retrieval_recall_at_k=retrieval_recall,
         retrieval_claims=len(retrieval_recalls),
+        evidence_direction_accuracy=direction_accuracy,
+        evidence_direction_items=direction_items,
+        citation_link_resolution_rate=citation_resolution,
+        citation_links_checked=len(checked_statuses),
         num_claims=n,
         num_correct=correct,
         num_confidently_wrong=confidently_wrong,

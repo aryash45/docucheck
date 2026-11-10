@@ -155,6 +155,7 @@ class DocumentClaimExtractor:
         self.max_claims_per_chunk = max_claims_per_chunk
         self.max_total_claims = max_total_claims
         self.chunker = chunker or TextChunker()
+        self.last_chunks: list[TextChunk] = []
 
     def extract(self, doc: ParsedDocument, topic: str = "") -> list[Claim]:
         """
@@ -174,7 +175,8 @@ class DocumentClaimExtractor:
             return []
 
         effective_topic = topic or doc.title or "the document"
-        chunks = self.chunker.chunk(doc.text)
+        chunks = self.chunker.chunk_document(doc)
+        self.last_chunks = chunks
         logger.info(
             "DocumentClaimExtractor: '%s' → %d chunks",
             doc.title or doc.source_path,
