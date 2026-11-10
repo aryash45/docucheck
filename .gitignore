@@ -5,6 +5,9 @@ __pycache__/
 
 # Environments
 .env
+evals/data/public/scifact/data/
+evals/data/public/scifact/data.tar.gz
+evals/data/public/scifact/._*
 .venv/
 env/
 venv/

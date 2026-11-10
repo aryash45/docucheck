@@ -2,11 +2,11 @@
 
 ## Active phase
 
-Phase 2 implementation complete; ready for Phase 3 planning.
+Phase 2 implementation and public evaluation dataset complete; ready for Phase 3 planning.
 
 ## Active subphase
 
-None.
+3.1 Plan citation integrity, honest abstention, reviewer checks, and conflict detection.
 
 ## Last verified
 

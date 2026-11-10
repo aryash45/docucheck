@@ -10,6 +10,10 @@ python -m evals.run_eval --dataset evals/data/smoke.jsonl
 
 # Run with LLM enabled (requires GEMINI_API_KEY)
 python -m evals.run_eval --dataset evals/data/smoke.jsonl --provider gemini
+
+# Run the committed public SciFact development holdout
+python -m evals.run_eval --dataset evals/data/public/scifact_dev.jsonl \
+  --provider heuristic --notes "Public SciFact dev holdout baseline"
 ```
 
 Results are written to `outputs/evals/<timestamp>/`.
@@ -70,6 +74,15 @@ The current Phase 1 runner uses gold evidence passages as deterministic paper
 context so the verifier can be evaluated without network calls. Its retrieval
 recall is therefore a context/evidence-ID plumbing check, not a claim about a
 production retriever. Phase 2 should replace that fixture with real retrieval.
+
+## Public dataset
+
+`evals/data/public/scifact_dev.jsonl` is a normalized copy of the official
+AllenAI SciFact dev split. `evals/data/public/README.md` records the source,
+licenses, label mapping, and the exact importer command. The dev split is the
+holdout used for the baseline; the normalized train split is available for
+development only. The official unlabeled test split is intentionally not
+included in the scored dataset.
 
 Use `--resolve-citations` only when network access is intended:
 

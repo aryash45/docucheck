@@ -1,0 +1,12 @@
+{
+  "source": "allenai/scifact",
+  "split": "dev",
+  "input_claims": 300,
+  "output_claims": 300,
+  "excluded_claims": [],
+  "label_counts": {
+    "supported": 124,
+    "refuted": 64,
+    "unverifiable": 112
+  }
+}

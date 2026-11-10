@@ -1,0 +1,12 @@
+{
+  "source": "allenai/scifact",
+  "split": "train",
+  "input_claims": 809,
+  "output_claims": 809,
+  "excluded_claims": [],
+  "label_counts": {
+    "supported": 332,
+    "refuted": 173,
+    "unverifiable": 304
+  }
+}
