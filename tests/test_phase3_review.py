@@ -6,10 +6,10 @@ from src.tree.nodes import fact_checker_node
 from src.tree.state import Claim, ResearchState
 
 
-def _evidence(direction: str, score: float = 0.8) -> PassageEvidence:
+def _evidence(direction: str, score: float = 0.8, quote: str = "Exact passage") -> PassageEvidence:
     return PassageEvidence(
         evidence_id=f"ev_{direction}", source_id="paper", source_title="Paper",
-        quote="Exact passage", direction=direction, score=score,
+        quote=quote, direction=direction, score=score,
     )
 
 
@@ -26,6 +26,11 @@ def test_review_flags_weak_and_invalid_citations():
     item.char_start, item.char_end = 10, 2
     flags = review_evidence([item])
     assert {"weak_evidence", "citation_integrity", "invalid_location"}.issubset(flags)
+
+
+def test_review_flags_numeric_condition_mismatch():
+    flags = review_evidence([_evidence("supporting", quote="Capacity was 180 mAh/g at 0.5C.")], claim="capacity reaches 210 mAh/g at 1C")
+    assert "condition_mismatch" in flags
 
 
 def test_absence_language_is_not_mistaken_for_refutation():

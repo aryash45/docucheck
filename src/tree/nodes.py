@@ -483,8 +483,8 @@ def fact_checker_node(state: ResearchState) -> ResearchState:
 
     for claim in state.claims:
         v = _verify_claim(claim, state.papers, state.topic, state.passages)
-        v.review_flags = review_evidence(v.evidence)
-        if state.passages and ("missing_evidence" in v.review_flags or "conflicting_evidence" in v.review_flags):
+        v.review_flags = review_evidence(v.evidence, claim=claim.text)
+        if state.passages and ("missing_evidence" in v.review_flags or "conflicting_evidence" in v.review_flags or "condition_mismatch" in v.review_flags):
             v.verdict = "UNVERIFIABLE"
             v.supported = False
             v.confidence = min(v.confidence, 0.35)

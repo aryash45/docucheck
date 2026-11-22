@@ -57,7 +57,11 @@ def to_passage_evidence(
     return evidence
 
 
-def review_evidence(evidence: list[PassageEvidence], min_score: float = 0.35) -> list[str]:
+def review_evidence(
+    evidence: list[PassageEvidence],
+    claim: str = "",
+    min_score: float = 0.35,
+) -> list[str]:
     """Return conservative reviewer flags for a verification's evidence."""
     flags: list[str] = []
     directions = {item.direction for item in evidence}
@@ -67,6 +71,11 @@ def review_evidence(evidence: list[PassageEvidence], min_score: float = 0.35) ->
         flags.append("conflicting_evidence")
     if evidence and max(item.score for item in evidence) < min_score:
         flags.append("weak_evidence")
+    if claim:
+        claim_numbers = set(re.findall(r"\d+(?:\.\d+)?", claim))
+        evidence_numbers = set(re.findall(r"\d+(?:\.\d+)?", " ".join(item.quote for item in evidence)))
+        if claim_numbers and evidence_numbers and claim_numbers.isdisjoint(evidence_numbers):
+            flags.append("condition_mismatch")
     if any(not item.source_id or not item.quote.strip() for item in evidence):
         flags.append("citation_integrity")
     if any(item.char_start is not None and item.char_end is not None and item.char_end < item.char_start for item in evidence):

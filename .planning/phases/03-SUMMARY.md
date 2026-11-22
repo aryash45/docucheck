@@ -22,3 +22,9 @@ retrieved evidence forces abstention. The 2026 GenData heuristic baseline
 remained 38.00% accurate, while macro-F1 improved from 25.46% to 30.00%,
 confidently-wrong rate fell from 10.00% to 0.00%, and abstention rose from
 14.00% to 30.00%.
+
+The follow-up condition-mismatch gate flags disjoint numeric values and
+abstains conservatively. GenData macro-F1 reached 31.00%, confidently-wrong
+remained 0.00%, and abstention reached 40.00%; raw accuracy stayed 38.00%.
+SciFact accuracy was 72.00%, showing this rule needs later calibration before
+being treated as a production-quality numeric reasoner.
