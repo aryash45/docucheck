@@ -20,7 +20,7 @@ from .state import (
     ResearchState,
     VerificationScore,
 )
-from .evidence import to_passage_evidence
+from .evidence import review_evidence, to_passage_evidence
 from src.retrieval.evidence import PassageRetriever
 from src.citations.resolver import CitationResolver
 
@@ -483,6 +483,11 @@ def fact_checker_node(state: ResearchState) -> ResearchState:
 
     for claim in state.claims:
         v = _verify_claim(claim, state.papers, state.topic, state.passages)
+        v.review_flags = review_evidence(v.evidence)
+        if state.passages and ("missing_evidence" in v.review_flags or "conflicting_evidence" in v.review_flags):
+            v.verdict = "UNVERIFIABLE"
+            v.supported = False
+            v.confidence = min(v.confidence, 0.35)
         verifications.append(v)
         logger.info(
             "FactChecker: claim=%s verdict=%s confidence=%.2f",
@@ -580,6 +585,17 @@ def _verify_claim(
             supporting_sources=[e.source_title for e in evidence_supporting],
             contradicting_sources=[],
             verdict="SUPPORTED",
+            evidence=retrieved_evidence,
+        )
+
+    if retrieved_evidence and not evidence_supporting and not evidence_contradicting:
+        return ClaimVerification(
+            claim_id=claim.claim_id,
+            supported=False,
+            confidence=0.2,
+            supporting_sources=[],
+            contradicting_sources=[],
+            verdict="UNVERIFIABLE",
             evidence=retrieved_evidence,
         )
 

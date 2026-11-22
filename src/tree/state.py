@@ -82,6 +82,7 @@ class ClaimVerification:
     contradicting_sources: list[str]
     verdict: str           # "SUPPORTED" | "REFUTED" | "UNVERIFIABLE"
     evidence: list[PassageEvidence] = field(default_factory=list)
+    review_flags: list[str] = field(default_factory=list)
 
     @property
     def direction_counts(self) -> dict[str, int]:
@@ -221,6 +222,8 @@ class ResearchState:
                     "supported_by": v.supporting_sources,
                     "contradicted_by": v.contradicting_sources,
                     "direction_counts": v.direction_counts,
+                    "review_flags": v.review_flags,
+                    "needs_review": bool(v.review_flags),
                     "evidence": [
                         {
                             "evidence_id": item.evidence_id,

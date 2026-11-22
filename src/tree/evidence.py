@@ -11,6 +11,11 @@ _NEGATION = re.compile(
     r"\b(?:not|no|never|without|fails? to|unable to|contrary|however|refute|disagree)\b",
     re.IGNORECASE,
 )
+_ABSENCE = re.compile(
+    r"\b(?:not reported|not specified|no comparable evidence|no evidence|"
+    r"cannot be determined|unable to determine|not enough information)\b",
+    re.IGNORECASE,
+)
 
 
 def classify_direction(claim: str, quote: str) -> str:
@@ -19,6 +24,8 @@ def classify_direction(claim: str, quote: str) -> str:
     quote_terms = set(re.findall(r"[a-z0-9]{3,}", quote.lower()))
     overlap = len(claim_terms & quote_terms)
     if overlap < 2:
+        return "neutral"
+    if _ABSENCE.search(quote):
         return "neutral"
     if _NEGATION.search(quote) and not _NEGATION.search(claim):
         return "contradicting"
@@ -48,3 +55,20 @@ def to_passage_evidence(
             char_end=chunk.char_end,
         ))
     return evidence
+
+
+def review_evidence(evidence: list[PassageEvidence], min_score: float = 0.35) -> list[str]:
+    """Return conservative reviewer flags for a verification's evidence."""
+    flags: list[str] = []
+    directions = {item.direction for item in evidence}
+    if not evidence:
+        flags.append("missing_evidence")
+    if {"supporting", "contradicting"}.issubset(directions):
+        flags.append("conflicting_evidence")
+    if evidence and max(item.score for item in evidence) < min_score:
+        flags.append("weak_evidence")
+    if any(not item.source_id or not item.quote.strip() for item in evidence):
+        flags.append("citation_integrity")
+    if any(item.char_start is not None and item.char_end is not None and item.char_end < item.char_start for item in evidence):
+        flags.append("invalid_location")
+    return flags

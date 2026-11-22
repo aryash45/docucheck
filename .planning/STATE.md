@@ -2,11 +2,11 @@
 
 ## Active phase
 
-Phase 2 implementation and public evaluation dataset complete; ready for Phase 3 planning.
+Phase 3 review layer implemented and verified; ready for Phase 4 planning.
 
 ## Active subphase
 
-3.1 Plan citation integrity, honest abstention, reviewer checks, and conflict detection.
+Plan Phase 4: product shell and API.
 
 ## Last verified
 

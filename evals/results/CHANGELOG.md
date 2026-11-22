@@ -11,3 +11,9 @@ Curated record of eval runs for resume/demo. Only measured values after the harn
 | 2026-11-10 | 177ec74 | smoke.jsonl | heuristic | Phase 2 citation-enabled baseline | 0.6667 | 0.5761 | 0.0000 | 0.3333 | retrieval_recall=0.9231 (13 claims) |
 | 2026-11-10 | 5cd13a1 | scifact_dev.jsonl | heuristic | Public SciFact dev holdout baseline | 0.7633 | 0.6314 | 0.0767 | 0.4233 | retrieval_recall=0.9753 (188 claims) |
 | 2026-11-10 | e23f0d9 | gendata_2026.jsonl | heuristic | Public 2026 GenData scientific verification baseline | 0.3800 | 0.2546 | 0.1000 | 0.1400 | retrieval_recall=0.98 (150 claims) |
+| 2026-11-22 | ba95aca | gendata_2026.jsonl | heuristic | Phase 3 review-layer baseline | 0.3800 | 0.2546 | 0.1000 | 0.1400 | retrieval_recall=0.98 (150 claims) |
+| 2026-11-22 | ba95aca | scifact_dev.jsonl | heuristic | Phase 3 review-layer baseline | 0.7333 | 0.6055 | 0.0633 | 0.4667 | retrieval_recall=0.9753 (188 claims) |
+| 2026-11-22 | ba95aca | gendata_2026.jsonl | heuristic | Phase 3 calibration baseline | 0.3800 | 0.2546 | 0.1000 | 0.1400 | retrieval_recall=0.98 (150 claims) |
+| 2026-11-22 | ba95aca | scifact_dev.jsonl | heuristic | Phase 3 calibration baseline | 0.7367 | 0.6082 | 0.0633 | 0.4633 | retrieval_recall=0.9753 (188 claims) |
+| 2026-11-22 | ba95aca | gendata_2026.jsonl | heuristic | Phase 3 calibration baseline | 0.3800 | 0.3013 | 0.0000 | 0.3000 | retrieval_recall=0.98 (150 claims) |
+| 2026-11-22 | ba95aca | scifact_dev.jsonl | heuristic | Phase 3 calibration baseline | 0.7267 | 0.5998 | 0.0600 | 0.4767 | retrieval_recall=0.9753 (188 claims) |
