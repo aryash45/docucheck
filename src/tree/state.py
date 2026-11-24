@@ -73,6 +73,17 @@ class PassageEvidence:
     conditions: dict = field(default_factory=dict)
 
 
+class CitationStatus:
+    """Allowed lifecycle states for a proposed citation."""
+
+    VERIFIED = "verified"
+    NEEDS_REVIEW = "needs_review"
+    REJECTED = "rejected"
+    FAILED = "failed"
+
+    ALL = {VERIFIED, NEEDS_REVIEW, REJECTED, FAILED}
+
+
 @dataclass
 class ClaimVerification:
     """Fact-checker's verdict on a single claim."""
@@ -84,6 +95,19 @@ class ClaimVerification:
     verdict: str           # "SUPPORTED" | "REFUTED" | "UNVERIFIABLE"
     evidence: list[PassageEvidence] = field(default_factory=list)
     review_flags: list[str] = field(default_factory=list)
+    # Citation generation must keep this at needs_review until the citation
+    # engine validates the source identity, quote, and location.
+    citation_status: str = CitationStatus.NEEDS_REVIEW
+
+    @property
+    def citation_eligible(self) -> bool:
+        """Whether this claim may be sent to the citation generator."""
+        return (
+            self.verdict == "SUPPORTED"
+            and bool(self.evidence)
+            and not self.review_flags
+            and all(item.source_id.strip() and item.quote.strip() for item in self.evidence)
+        )
 
     @property
     def direction_counts(self) -> dict[str, int]:
@@ -225,6 +249,8 @@ class ResearchState:
                     "direction_counts": v.direction_counts,
                     "review_flags": v.review_flags,
                     "needs_review": bool(v.review_flags),
+                    "citation_status": v.citation_status,
+                    "citation_eligible": v.citation_eligible,
                     "evidence": [
                         {
                             "evidence_id": item.evidence_id,

@@ -3,7 +3,7 @@ from src.tree.state import PassageEvidence
 from src.ingestion.chunker import TextChunk
 from src.literature.fetcher import Paper
 from src.tree.nodes import fact_checker_node
-from src.tree.state import Claim, ResearchState
+from src.tree.state import Claim, CitationStatus, ClaimVerification, ResearchState
 
 
 def _evidence(direction: str, score: float = 0.8, quote: str = "Exact passage") -> PassageEvidence:
@@ -58,3 +58,51 @@ def test_neutral_passage_forces_abstention(monkeypatch):
     )
     fact_checker_node(state)
     assert state.verifications[0].verdict == "UNVERIFIABLE"
+
+
+def test_citation_contract_blocks_claim_without_evidence():
+    verification = ClaimVerification(
+        claim_id="claim",
+        supported=True,
+        confidence=0.9,
+        supporting_sources=["Paper"],
+        contradicting_sources=[],
+        verdict="SUPPORTED",
+    )
+
+    assert verification.citation_status == CitationStatus.NEEDS_REVIEW
+    assert verification.citation_eligible is False
+
+
+def test_citation_contract_allows_only_clean_supported_evidence():
+    verification = ClaimVerification(
+        claim_id="claim",
+        supported=True,
+        confidence=0.9,
+        supporting_sources=["Paper"],
+        contradicting_sources=[],
+        verdict="SUPPORTED",
+        evidence=[_evidence("supporting")],
+    )
+
+    assert verification.citation_eligible is True
+    assert verification.citation_status == CitationStatus.NEEDS_REVIEW
+
+
+def test_output_exposes_citation_contract():
+    state = ResearchState(
+        claims=[Claim("claim", "eval", "The treatment works", ["Paper"])],
+        verifications=[ClaimVerification(
+            claim_id="claim",
+            supported=False,
+            confidence=0.2,
+            supporting_sources=[],
+            contradicting_sources=[],
+            verdict="UNVERIFIABLE",
+        )],
+    )
+
+    output = state.to_output_dict()
+    result = output["verifications"][0]
+    assert result["citation_status"] == CitationStatus.NEEDS_REVIEW
+    assert result["citation_eligible"] is False

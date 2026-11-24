@@ -7,6 +7,8 @@ Scope: planning only. Primary wedge is Mode 3: fact-check an uploaded document w
 
 DocuCheck should become a narrow, credible document fact-checking tool before it becomes a general research agent. The near-term product user should be someone who already has a document or draft and wants to know: "Which claims are supported, contradicted, or unverifiable, and what exact passage proves that?" The strongest resume story will come from measured verification quality, citation integrity, and honest abstention, not from a broad UI or inflated agent claims.
 
+The product should also offer evidence-backed citation assistance: users can upload a research paper, receive citations only for claims with verified supporting evidence, and get a bibliography in the requested style. The system must never invent a source or silently cite a merely similar passage; unsupported claims remain uncited and are flagged for review.
+
 Quality work should precede the web shell. The current implementation has a critical Mode 3 correctness bug that makes uploaded-document fact-checking return an apparently successful empty result. Fix that first, then build an eval harness, then add passage-level evidence and citation-integrity metrics. Only then wrap it in a web product.
 
 ---
@@ -145,11 +147,13 @@ Goal: make it usable as a web tool without hiding quality limitations. This phas
 | 4.5 | Run states | API/run store | States: queued/running/done/failed; failures include safe error message. | 0.5 day | Partial outputs. |
 | 4.6 | SSE progress | API/events | `GET /runs/{id}/events` streams trace/progress; per-claim events visible. | 1 day | Browser reconnect behavior. |
 | 4.7 | API endpoints | API/tests | Implement `POST /research/scaffold`, `POST /fact-check`, `GET /runs/{id}`, `GET /runs/{id}/events`, `GET /runs/{id}/artifacts/{name}`. | 1-2 days | Keep Mode 1 secondary. |
-| 4.8 | Minimal frontend | `web/` or `app.py` Streamlit | Upload document, show extracted claims before checking, start run, show progress timeline and results table. | 2-3 days | Avoid Next.js unless needed; Streamlit/static HTML may be enough. |
-| 4.9 | Upload validation | API/parser | Size/type/filename limits enforced; rejected uploads have clear errors. | 1 day | PDF parsing edge cases. |
-| 4.10 | Docker deploy | `Dockerfile`, `docker-compose.yml` | One-command local deploy; public mode disables subprocess sandbox. | 1 day | Model downloads inflate image; prefer runtime cache. |
+| 4.8 | Verified citation generation | `src/citations/`, state, writer, API/tests | For each supported claim, insert a citation only when an exact evidence passage, source identity, and location pass verification; unsupported claims remain uncited with a review flag. Generate a machine-readable bibliography and requested APA/MLA/Chicago/IEEE-style output. | 3-5 days | Citation formatting is not evidence verification; never fall back to guessed references. |
+| 4.9 | Citation review UI | `web/` or `app.py` Streamlit | Upload document, show proposed citation changes side-by-side with claim, quote, source, page/section, and accept/reject controls. | 2-3 days | Avoid automatic edits that users cannot audit. |
+| 4.10 | Minimal frontend | `web/` or `app.py` Streamlit | Upload document, show extracted claims before checking, start run, show progress timeline and results table. | 2-3 days | Avoid Next.js unless needed; Streamlit/static HTML may be enough. |
+| 4.11 | Upload validation | API/parser | Size/type/filename limits enforced; rejected uploads have clear errors. | 1 day | PDF parsing edge cases. |
+| 4.12 | Docker deploy | `Dockerfile`, `docker-compose.yml` | One-command local deploy; public mode disables subprocess sandbox. | 1 day | Model downloads inflate image; prefer runtime cache. |
 
-Demonstrable at end: user uploads a document in a browser, reviews extracted claims, starts a background fact-check, watches per-claim progress, and downloads JSON/markdown audit artifacts.
+Demonstrable at end: user uploads a document in a browser, reviews proposed evidence-backed citations, accepts or rejects changes, watches per-claim progress, and downloads the revised document plus JSON/Markdown audit artifacts.
 
 ### Phase 5: user validation
 
