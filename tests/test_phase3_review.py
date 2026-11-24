@@ -40,6 +40,14 @@ def test_absence_language_is_not_mistaken_for_refutation():
     ) == "neutral"
 
 
+def test_structured_missing_measurement_is_neutral():
+    assert classify_direction(
+        "The treatment reduces mortality",
+        "The paper reports a result.",
+        {"reference_status": "capacity: not_reported"},
+    ) == "neutral"
+
+
 def test_neutral_passage_forces_abstention(monkeypatch):
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     paper = Paper("paper", "Paper", "No comparable evidence is reported.", [], 2026, 0, "test", "")

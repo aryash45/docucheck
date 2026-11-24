@@ -10,4 +10,5 @@ def test_normalize_gendata_maps_public_verdicts(tmp_path: Path):
     rows, manifest = normalize(source)
     assert [row["gold_label"] for row in rows] == ["supported", "refuted", "unverifiable"]
     assert rows[0]["gold_evidence"][0]["url"] == "https://doi.org/10.1/x"
+    assert rows[0]["gold_evidence"][0]["conditions"] == {}
     assert manifest["input_rows"] == 3

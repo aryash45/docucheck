@@ -84,6 +84,7 @@ def _build_mock_passages(claim: EvalClaim) -> list[TextChunk]:
             char_end=location.get("char_end", len(ev.quote or ev.source_title)),
             page_start=location.get("page"),
             page_end=location.get("page"),
+            metadata=ev.conditions,
         ))
     return passages
 

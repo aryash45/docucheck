@@ -19,3 +19,5 @@ Curated record of eval runs for resume/demo. Only measured values after the harn
 | 2026-11-22 | ba95aca | scifact_dev.jsonl | heuristic | Phase 3 calibration baseline | 0.7267 | 0.5998 | 0.0600 | 0.4767 | retrieval_recall=0.9753 (188 claims) |
 | 2026-11-22 | a43f2da | gendata_2026.jsonl | heuristic | Phase 3 condition-aware baseline | 0.3800 | 0.3142 | 0.0000 | 0.4000 | retrieval_recall=0.98 (150 claims) |
 | 2026-11-22 | a43f2da | scifact_dev.jsonl | heuristic | Phase 3 condition-aware baseline | 0.7200 | 0.5876 | 0.0600 | 0.4867 | retrieval_recall=0.9753 (188 claims) |
+| 2026-11-24 | c909d4b | gendata_2026.jsonl | heuristic | Structured evidence calibration | 0.6800 | 0.4781 | 0.0000 | 0.7000 | retrieval_recall=0.98 (150 claims) |
+| 2026-11-24 | c909d4b | scifact_dev.jsonl | heuristic | Structured evidence calibration | 0.7200 | 0.5876 | 0.0600 | 0.4867 | retrieval_recall=0.9753 (188 claims) |

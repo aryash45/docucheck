@@ -18,7 +18,7 @@ _ABSENCE = re.compile(
 )
 
 
-def classify_direction(claim: str, quote: str) -> str:
+def classify_direction(claim: str, quote: str, conditions: dict | None = None) -> str:
     """Classify a passage conservatively using lexical evidence only."""
     claim_terms = set(re.findall(r"[a-z0-9]{3,}", claim.lower()))
     quote_terms = set(re.findall(r"[a-z0-9]{3,}", quote.lower()))
@@ -26,6 +26,9 @@ def classify_direction(claim: str, quote: str) -> str:
     if overlap < 2:
         return "neutral"
     if _ABSENCE.search(quote):
+        return "neutral"
+    status = str((conditions or {}).get("reference_status", "")).lower()
+    if "not_reported" in status or "no_comparable" in status:
         return "neutral"
     if _NEGATION.search(quote) and not _NEGATION.search(claim):
         return "contradicting"
@@ -40,7 +43,7 @@ def to_passage_evidence(
     evidence: list[PassageEvidence] = []
     for item in retrieved:
         chunk = item.chunk
-        direction = classify_direction(claim, chunk.text)
+        direction = classify_direction(claim, chunk.text, chunk.metadata)
         evidence.append(PassageEvidence(
             evidence_id=f"{chunk.chunk_id}:evidence",
             source_id=chunk.document_id or "document",
@@ -53,6 +56,7 @@ def to_passage_evidence(
             page_end=chunk.page_end,
             char_start=chunk.char_start,
             char_end=chunk.char_end,
+            conditions=dict(chunk.metadata),
         ))
     return evidence
 

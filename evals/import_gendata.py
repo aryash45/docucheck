@@ -5,6 +5,14 @@ from pathlib import Path
 
 LABELS = {"supported": "supported", "not_supported": "refuted", "no_comparable_evidence": "unverifiable"}
 
+
+def _conditions(item: dict) -> dict:
+    return {
+        key: item.get(key, "").strip()
+        for key in ("reference_status", "reference_value", "deciding_condition", "deciding_evidence_status", "evidence_outcome")
+        if item.get(key, "").strip()
+    }
+
 def normalize(path: Path) -> tuple[list[dict], dict]:
     rows = []
     with path.open(encoding="utf-8", newline="") as handle:
@@ -12,6 +20,7 @@ def normalize(path: Path) -> tuple[list[dict], dict]:
             label = LABELS[item["correct_verdict"]]
             doi = item.get("doi", "").strip()
             quote = item.get("reference_quote_or_reason", "").strip()
+            conditions = _conditions(item)
             rows.append({
                 "id": f"gendata_{item['case_id']}_{item['model'].lower().replace(' ', '_')}",
                 "domain": "scientific_claim_verification", "document_id": item["case_id"],
@@ -19,7 +28,8 @@ def normalize(path: Path) -> tuple[list[dict], dict]:
                 "gold_evidence": [{"source_id": doi or item["deciding_record_id"],
                     "source_title": f"Open-access paper {doi}" if doi else "Public reference record",
                     "url": f"https://doi.org/{doi}" if doi else "", "quote": quote,
-                    "direction": "supporting" if label == "supported" else ("contradicting" if label == "refuted" else "neutral")}]
+                    "direction": "supporting" if label == "supported" else ("contradicting" if label == "refuted" else "neutral"),
+                    "conditions": conditions}]
                     if quote else [],
                 "allowed_sources": [doi] if doi else [],
                 "notes": f"Imported from GenData scientific-verification 2026; original model row={item['model']}."})

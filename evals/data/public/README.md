@@ -46,3 +46,8 @@ python -m evals.import_gendata
 
 This is a small, domain-specific 2026 development benchmark, not a general
 production-quality estimate.
+
+Each normalized evidence record also preserves the public reference fields for
+measurement status, reference value, deciding condition, and evidence outcome.
+These fields are used for condition-aware review instead of inferring every
+decision from free-text quotes.

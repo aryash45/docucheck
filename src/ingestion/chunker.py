@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import re
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -48,6 +48,7 @@ class TextChunk:
     char_end: int = 0
     page_start: int | None = None
     page_end: int | None = None
+    metadata: dict = field(default_factory=dict)
 
 
 class TextChunker:

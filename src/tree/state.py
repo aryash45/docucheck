@@ -70,6 +70,7 @@ class PassageEvidence:
     char_start: int | None = None
     char_end: int | None = None
     citation_status: str = "not_checked"
+    conditions: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -239,6 +240,7 @@ class ResearchState:
                             "char_start": item.char_start,
                             "char_end": item.char_end,
                             "citation_status": item.citation_status,
+                            "conditions": item.conditions,
                         }
                         for item in v.evidence
                     ],

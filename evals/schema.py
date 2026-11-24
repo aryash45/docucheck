@@ -27,6 +27,7 @@ class GoldEvidence:
     quote: str = ""
     location: dict = field(default_factory=dict)  # {page, char_start, char_end}
     direction: Direction = "supporting"
+    conditions: dict = field(default_factory=dict)
 
 
 @dataclass
